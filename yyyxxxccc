@@ -1,0 +1,2820 @@
+//@version=6
+indicator('RSI_Top_Bottom', max_bars_back = 500)
+
+// =============================
+// Inputs (from section.txt)
+// =============================
+len = input.int(7, minval = 1, title = 'RSI Length')
+src = input(close, 'RSI Source')
+ob = input(defval = 65, title = 'Upper Band')
+os = input(defval = 35, title = 'Lower Band')
+prd = input(defval = 10, title = 'Max Number of Bars in OB/OS')
+mindis = input(defval = 5, title = 'Min Number of Bars between Tops/Bottoms')
+maxdis = input(defval = 100, title = 'Max Number of Bars between Tops/Bottoms')
+topcol = input.color(defval = color.red, title = 'Line Colors', inline = 'cols')
+bottomcol = input.color(defval = color.lime, title = '', inline = 'cols')
+lwidth = input.int(defval = 2, title = 'Line Width', minval = 1, maxval = 4)
+chbarcol = input(defval = true, title = 'Change Bar Color')
+showExtraLines = input.bool(defval = true, title = 'Show Extra Lines', group = 'Extra Lines')
+
+
+line09 = input.int(defval = 9, title = 'Line 9 Level', group = 'Extra Lines')
+line25 = input.int(defval = 25, title = 'Line 25 Level', group = 'Extra Lines')
+line26 = input.int(defval = 25, title = 'Line 25 Level', group = 'Extra Lines')
+line36 = input.int(defval = 35, title = 'Line 35 Level', group = 'Extra Lines')
+line66 = input.int(defval = 65, title = 'Line 65 Level', group = 'Extra Lines')
+line75 = input.int(defval = 75, title = 'Line 75 Level', group = 'Extra Lines')
+line93 = input.int(defval = 93, title = 'Line 93 Level', group = 'Extra Lines')
+
+
+
+
+////////////////////////////////
+//
+//Moving avergae
+//
+//////////////////////////////////
+
+
+short_002 = ta.sma(close, 2)
+short_007 = ta.sma(close, 7)
+short_14 = ta.sma(close, 14)
+short_50 = ta.sma(close, 50)
+long_100 = ta.sma(close, 100)
+long_200 = ta.sma(close, 200)
+long_350 = ta.sma(close, 350)
+long_500 = ta.sma(close, 500)
+
+///////////////////////////////////////////////////////////////
+//
+//                Auto_Fib
+//
+//////////////////////////////////////////////////////////////
+
+
+fiblength = input(5500)
+maxr = ta.highest(close, fiblength)
+minr = ta.lowest(close, fiblength)
+ranr = maxr - minr
+
+
+
+fibo_1 = maxr
+fibo_0_764 = maxr - 0.236 * ranr
+fibo_0_618 = maxr - 0.382 * ranr
+fibo_0_5 = maxr - 0.50 * ranr
+fibo_0_382 = minr + 0.382 * ranr
+fibo_0_236 = minr + 0.236 * ranr
+fibo_0 = minr
+
+
+
+
+// =============================
+// SIGNAL TRACKING SYSTEM
+// =============================
+var string lastSignalType = ""
+
+// =============================
+// Calculations
+// =============================
+rsi = ta.rsi(src, len)
+rsi_ma50 = ta.sma(rsi, 50)
+
+// =============================
+// Restored Original Hlines (from short_term.txt)
+// =============================
+// Plot RSI and bands
+plot(rsi, 'RSI', color = color.rgb(86, 235, 255))
+plot(rsi_ma50, 'RSI MA50', color = color.rgb(255, 255, 255))
+band1 = hline(ob, 'Upper Band', color = #ffffff, linestyle = hline.style_dotted, linewidth = 2)
+band0 = hline(os, 'Lower Band', color = #ffffff, linestyle = hline.style_dotted, linewidth = 2)
+band50 = hline(50, 'Middle Line', color = #ffffff, linestyle = hline.style_dotted, linewidth = 2)
+
+// Extra lines
+line08_plot = hline(showExtraLines ? line09 : na, 'Line 09 shadow', color = #f9f8f635, linestyle = hline.style_solid, linewidth = 2)
+line25_plot = hline(showExtraLines ? line25 : na, 'Line 25', color = color.rgb(255, 255, 255, 19), linestyle = hline.style_dotted, linewidth = 2)
+line26_plot = hline(showExtraLines ? line26 : na, 'Line 25 shadow', color = #f7525f, linestyle = hline.style_dashed, linewidth = 2)
+line36_plot = hline(showExtraLines ? line36 : na, 'Line 35 shadow', color = #66bb6a, linestyle = hline.style_dashed, linewidth = 2)
+line66_plot = hline(showExtraLines ? line66 : na, 'Line 65 shadow', color = #ba68c8, linestyle = hline.style_dashed, linewidth = 2)
+line75_plot = hline(showExtraLines ? line75 : na, 'Line 75', color = #ffffff, linestyle = hline.style_dotted, linewidth = 2)
+line76_plot = hline(showExtraLines ? line75 : na, 'Line 75 shadow', color = #ff9800, linestyle = hline.style_dashed, linewidth = 2)
+line93_plot = hline(showExtraLines ? line93 : na, 'Line 93 shadow', color = #f9f8f635, linestyle = hline.style_solid, linewidth = 2)
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////                                Bollinger Bands                   ///////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+BBlength = input.int(200, minval = 5, title = 'Bollinger Period Length')
+BBmult = 2.0
+price = close
+BBbasis = ta.sma(price, BBlength)
+BBdev = BBmult * ta.stdev(price, BBlength)
+BBupper = BBbasis + BBdev
+BBlower = BBbasis - BBdev
+source = close
+buyEntry = ta.crossover(source, BBlower)
+sellEntry = ta.crossunder(source, BBupper)
+// plot(BBbasis, color = color.new(color.aqua, 0), title = 'BBbasis')
+// p1 = plot(BBupper, color = color.new(color.silver, 0), title = 'BBupper')
+// p2 = plot(BBlower, color = color.new(color.silver, 0), title = 'BBlower')
+// fill(p1, p2, color = color.new(color.silver, 90))
+
+
+
+
+
+                                    // =============================
+                                    // Signal Conditions 
+                                    // =============================
+
+
+
+
+////////////////////////////////
+//
+//Moving avergae
+//
+//////////////////////////////////
+
+
+long350 = ta.sma(close, 350)
+long500 = ta.sma(close, 500)
+//plot(long350, color = #ff1010, title = 'ma_350', linewidth = 2)
+//plot(long500, color = #0088ff, title = ' ma_500', linewidth = 3)
+
+
+
+
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////              Invalidation Level    //////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//Works with both overlays- true or false
+
+
+// ---------------------------------------------------------------------------------------------------------------------}
+// 𝙐𝙎𝙀𝙍 𝙄𝙉𝙋𝙐𝙏𝙎
+// ---------------------------------------------------------------------------------------------------------------------{
+int length_xx   = input.int(250, "Length")
+float upper_xx  = input.float(1.5,  "Upper Threshold", step = 0.1)
+float lower_xx  = input.float(-1.5, "Lower Threshold", step = 0.1)
+
+bool candles = input.bool(false, "Plot Bar Color")
+
+color col_up = #10cab8
+color col_dn = color.blue
+
+// Source
+series float source_xx = close[barstate.isconfirmed ? 0 : 1]
+
+// Max and Min prices for Invalidation Levels (period 5 bars back)
+var lowest              = array.new<float>(5)
+var highest             = array.new<float>(5)
+var series float points = na
+
+
+// ---------------------------------------------------------------------------------------------------------------------}
+// 𝙄𝙉𝘿𝙄𝘾𝘼𝙏𝙊𝙍 𝘾𝘼𝙇𝘾𝙐𝙇𝘼𝙏𝙄𝙊𝙉𝙎
+// ---------------------------------------------------------------------------------------------------------------------{
+//@function Calculation of slope and intercept
+//@param length LookBack Period
+//@returns  Linear Regression Oscillator
+linear_regression_osc(int length_xx)=>
+    n      = length_xx
+    sum_x  = 0.0
+    sum_y  = 0.0
+    sum_xy = 0.0
+    sum_x_squared = 0.0
+
+    for i = 0 to n - 1
+        sum_x         := sum_x + i
+        sum_y         := sum_y + source_xx[i]
+        sum_xy        := sum_xy + i * source_xx[i]
+        sum_x_squared := sum_x_squared + i * i
+
+    m = (n * sum_xy - sum_x * sum_y) / (n * sum_x_squared - sum_x * sum_x)
+    c = (sum_y - m * sum_x) / n
+    
+    linear_regression = ((m * bar_index + c)*-1)
+
+// Calculate linear regression Oscillator
+linear_regression = linear_regression_osc(length_xx)
+
+// Normaliztion
+linear_regression := (linear_regression - ta.sma(linear_regression, 100)) / ta.stdev(linear_regression, 100)
+
+// Conditions of Mean Reversion and Trends
+cond1  = ta.crossunder(linear_regression, 0)
+cond2  = ta.crossover(linear_regression, 0)
+
+// Separate conditions for mean reversion (boolean)
+cond_1_bool = ta.crossunder(linear_regression, linear_regression[2]) and linear_regression > upper_xx
+cond_2_bool = ta.crossover(linear_regression, linear_regression[2]) and linear_regression < lower_xx
+
+// Values for plotting (preserve original values)
+cond_1_value = cond_1_bool ? linear_regression[1] : na
+cond_2_value = cond_2_bool ? linear_regression[1] : na
+
+// Invalidation Price Levels 
+lowest.push(low)
+highest.push(high)
+
+if lowest.size() > 5
+    lowest.shift()
+    highest.shift()
+
+if cond1 
+    points := highest.max()
+if cond2 
+    points := lowest.min()
+
+
+// ---------------------------------------------------------------------------------------------------------------------}
+// 𝙑𝙄𝙎𝙐𝘼𝙇𝙄𝙕𝘼𝙏𝙄𝙊𝙉
+// ---------------------------------------------------------------------------------------------------------------------{
+// Oscillator Mean Reversion above or below Thresholds
+// plotchar(cond_1_value, "", "◇", 
+//          color = col_dn, 
+//          location = location.absolute, 
+//          size = size.small, 
+//          offset = -1
+//          )
+// plotchar(cond_2_value, "", "◇", 
+//          color = col_up, 
+//          location = location.absolute, 
+//          size = size.small, 
+//          offset = -1
+        //  )
+// Oscillator Crosses zero Line
+// plotchar(cond1 ? 0 : na, "", "◆", 
+//          color = color.new(col_dn, 0),
+//          location = location.absolute, 
+//          size = size.tiny, 
+//          offset = -1
+//          )
+// plotchar(cond2 ? 0 : na, "", "◆",
+//          color = color.new(col_up, 0), 
+//          location = location.absolute, 
+//          size = size.tiny, 
+//          offset = -1
+//          )
+
+// Trend Labels on the chart
+if cond2
+    label.new(chart.point.from_index(bar_index, low), "▲", 
+                       style         = label.style_label_up, 
+                       textcolor     = col_up, 
+                       size          = size.large, 
+                       color         = color(na), 
+                       force_overlay = true
+                       )
+if cond1
+    label.new(chart.point.from_index(bar_index, high), "▼", 
+                       style         = label.style_label_down, 
+                       textcolor     = col_dn, 
+                       size          = size.large, 
+                       color         = color(na), 
+                       force_overlay = true
+                       )
+// Meant Reversion Labels on the chart
+// if cond_2_bool
+//     label.new(chart.point.from_index(bar_index, low),
+//                        text          = "◆\nReversion",
+//                        style         = label.style_label_up, 
+//                        textcolor     = col_up, 
+//                        size          = size.normal, 
+//                        color         = color(na), 
+//                        force_overlay = true
+//                        )
+// if cond_1_bool
+//     label.new(chart.point.from_index(bar_index, high), 
+//                        text          = "Reversion\n◆",
+//                        style         = label.style_label_down, 
+//                        textcolor     = col_dn, 
+//                        size          = size.normal, 
+//                        color         = color(na), 
+//                        force_overlay = true
+//                        )
+
+// Invalidation Price Levels - FIXED: removed 'not' operator
+plot(ta.change(points) == 0 ? points : na, 
+         color          = linear_regression > 0 
+                           ? color.from_gradient(linear_regression, 0, 1, color(na), col_up) 
+                           : color.from_gradient(linear_regression, -1, 0, col_dn, color(na)), 
+         linewidth      = 2, 
+         style          = plot.style_linebr, 
+         force_overlay  = true
+         )
+
+// Fixed: use comparison instead of 'not' operator
+if ta.change(points) != 0
+    label.new(chart.point.from_index(bar_index, points[1]), 
+                       text          = "Invalidation\nLevel",
+                       style         = label.style_label_left, 
+                       textcolor     = linear_regression < 0 ? col_dn : col_up, 
+                       size          = size.small, 
+                       color         = color(na), 
+                       force_overlay = true
+                       )
+
+// // Candles Color
+// candle_col = candles ? (linear_regression < 0 ? col_dn : col_up) : na
+// plotcandle(open, high, low, close,
+//              title = "Color Candles", 
+//              color = candle_col, 
+//              bordercolor = candle_col, 
+//              wickcolor = candle_col, 
+//              force_overlay= true
+//              )
+// barcolor(candle_col)
+
+//◆ ♢ ❖ ◇ ⬖
+// ---------------------------------------------------------------------------------------------------------------------}
+
+
+// // =============================
+// // SNIPPETS - Custom Signals at Specific RSI Levels
+// // =============================
+
+// Snippet 1: 
+snippet1_condition = rsi >= 93 and BBbasis > long500
+//plotchar(snippet1_condition ? 35 : na, "✨", "✨", location = location.absolute, color = color.yellow, size = size.small)
+if snippet1_condition
+    lastSignalType := "✨_Snippet1"
+
+
+
+
+
+
+
+
+// Snippet 6:
+snippet6_condition = linear_regression > 0 and points < BBbasis and points < long350 and points < long500 and BBbasis < long350 and long500 > BBupper and close > long500
+//plotchar(snippet6_condition ? 35 : na, "💥", "💥", location = location.absolute, color = color.white, size = size.small)
+if snippet6_condition
+    lastSignalType := "💥_Snippet6"
+
+// Snippet 7: 
+snippet7_condition = linear_regression > 0 and points < BBlower and rsi_ma50 < 60 and close > long500 and BBbasis > long500
+//plotchar(snippet7_condition ? 35 : na, "⚡️", "⚡️", location = location.absolute, color = color.yellow, size = size.small)
+if snippet7_condition
+    lastSignalType := "⚡️_Snippet7"
+
+
+
+// Snippet 9:
+snippet9_condition = long350 > BBupper and long500 > BBupper and long500 > long350 and BBbasis < BBupper and BBbasis > points and points > BBlower and close > long350 and linear_regression > 0
+//plotchar(snippet9_condition ? 35 : na, "🚀", "🚀", location = location.absolute, color = color.white, size = size.small)
+if snippet9_condition
+    lastSignalType := "🚀_Snippet9"
+
+
+
+// =============================
+// SNIPPET 15: ⚡️ - Wait for ⚡️ trigger then ma_350 < ma_500
+// =============================
+
+// State variables
+var bool snip15_armed = false
+var bool snip15_trigger = false
+
+// Detect when ⚡️ (snippet7) is triggered
+bool snip7_triggered = snippet7_condition
+
+// Update state and trigger
+if not snip15_armed and snip7_triggered
+    snip15_armed := true
+    snip15_trigger := false
+else if snip15_armed and long350 < long500
+    snip15_armed := false
+    snip15_trigger := true
+    lastSignalType := "⚡️_Snippet15"
+else
+    snip15_trigger := false
+
+// Plot only when trigger is true - using proper ternary syntax
+//plotchar(snip15_trigger ? 75 : na, "⚡️", "⚡️", location = location.absolute, color = color.yellow, size = size.small)
+
+
+// =============================
+// SNIPPET 16: ⚡️ - 4-Step Sequence
+//   Step 1: Wait for ⚡️ at 75th line (snippet15) to trigger -> arm
+//   Step 2: Wait for close > BBupper and BBbasis < long500 and long350 < long500 
+//           and linear_regression < 0 and points < long500 and points < long350 
+//           and points < BBbasis -> plot ⚡️ at 35th line
+//   Step 3: After Step 2 trigger, wait for rsi_ma50 > 65
+//   Step 4: Wait for rsi_ma50 < 50 -> plot ⚡️ at 35th line again
+// =============================
+
+// State variables
+var bool snip16_armed       = false   // armed by snip15
+var bool snip16_trigger     = false   // Step 2 trigger (original snip16 plot)
+var bool snip16_waiting_rsi = false   // armed for rsi step sequence
+var bool snip16_rsi_high    = false   // rsi_ma50 > 65 confirmed
+var bool snip16_trigger2    = false   // final trigger after rsi_ma50 < 50
+
+// Detect when ⚡️ at 75th line (snippet15) is triggered
+bool snip15_triggered = snip15_trigger
+
+// Reset per-bar triggers
+snip16_trigger  := false
+snip16_trigger2 := false
+
+// ---- Step 1 & Step 2 (original snippet16 logic) ----
+if not snip16_armed and snip15_triggered
+    // Step 1: Snippet 15 triggered - arm the system
+    snip16_armed   := true
+    snip16_trigger := false
+else if snip16_armed and close > BBupper and BBbasis < long500 and long350 < long500 and linear_regression < 0 and points < long500 and points < long350 and points < BBbasis
+    // Step 2: Trigger original signal, and now arm the RSI sequence
+    snip16_armed       := false
+    snip16_trigger     := true
+    snip16_waiting_rsi := true
+    snip16_rsi_high    := false
+    lastSignalType     := "⚡️_Snippet16"
+
+// ---- Step 3 & Step 4 (new RSI sequence) ----
+if snip16_waiting_rsi and not snip16_rsi_high
+    // Step 3: Wait for rsi_ma50 > 65
+    if rsi_ma50 > 65
+        snip16_rsi_high := true
+else if snip16_waiting_rsi and snip16_rsi_high
+    // Step 4: Wait for rsi_ma50 < 50 -> plot again and reset
+    if rsi_ma50 < 50
+        snip16_waiting_rsi := false
+        snip16_rsi_high    := false
+        snip16_trigger2    := true
+        lastSignalType     := "⚡️_Snippet16_Rpt"
+
+
+// Plot Step 4 trigger (after rsi_ma50 > 65 then < 50) - at 35th line
+plotchar(snip16_trigger2 ? 9 : na, "⚡️", "⚡️", location = location.absolute, color = color.yellow, size = size.small)
+
+
+// =============================
+// SNIPPET 34: 🚀 - 5-Step Sequence
+//   Step 1: Wait for 🚀 (snippet 9) trigger -> arm the system
+//   Step 2: Wait for ma_350 > ma_500 and close > ma_500 and ma_350 > BBlower
+//   Step 3: Wait for rsi_ma50 > 65
+//   Step 4: Wait for rsi_ma50 < 50 -> transition to Step 5 (no plot)
+//   Step 5: Wait for rsi_ma50 > 63 -> plot 🚀 at 35th line (ONLY PLOT)
+// =============================
+
+// State variables
+var int  snip34_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed, 3 = step3 confirmed, 4 = step4 done waiting for step5
+var bool snip34_trigger = false
+
+// Detect when 🚀 (snippet9) is triggered
+bool snip9_triggered = snippet9_condition
+
+// Reset trigger each bar
+snip34_trigger := false
+
+if snip34_state == 0
+    // Step 1: Snippet 9 triggered - arm the system
+    if snip9_triggered
+        snip34_state := 1
+else if snip34_state == 1
+    // Step 2: Wait for ma_350 > ma_500 and close > ma_500 and ma_350 > BBlower
+    if long350 > long500 and close > long500 and long350 > BBlower
+        snip34_state := 2
+else if snip34_state == 2
+    // Step 3: Wait for rsi_ma50 > 65
+    if rsi_ma50 > 65
+        snip34_state := 3
+else if snip34_state == 3
+    // Step 4: Wait for rsi_ma50 < 50 -> transition to Step 5 (NO plot here)
+    if rsi_ma50 < 50
+        snip34_state := 4
+else if snip34_state == 4
+    // Step 5: Wait for rsi_ma50 > 63 -> trigger and reset
+    if rsi_ma50 > 63
+        snip34_state   := 0
+        snip34_trigger := true
+        lastSignalType := "🚀_Snippet34"
+
+// Plot ONLY when Step 5 triggers - at 35th line
+//plotchar(snip34_trigger ? 35 : na, "🚀", "🚀", location = location.absolute, color = color.white, size = size.small)
+
+
+
+
+
+
+// =============================
+// SNIPPET 47: 💥 - Wait for 💥 trigger (snippet 6), capture BBupper and BBlower, then:
+//   Option 1: If BBbasis > captured BBupper first -> plot 💥 at 35th line
+//   Option 2: If BBbasis < captured BBlower first -> plot 💥 at 50th line
+//   First come, first served
+// =============================
+
+// State variables
+var bool snip47_armed = false
+var float snip47_captured_bbupper = na
+var float snip47_captured_bblower = na
+var bool snip47_trigger_path1 = false  // 💥 at 35th line (BBbasis > captured BBupper)
+var bool snip47_trigger_path2 = false  // 💥 at 50th line (BBbasis < captured BBlower)
+
+// Detect when 💥 (snippet6) is triggered
+bool snip6_triggered = snippet6_condition
+
+// Update state and trigger
+if not snip47_armed and snip6_triggered
+    // Step 1: Snippet 6 triggered - capture BBupper and BBlower, arm the system
+    snip47_armed := true
+    snip47_captured_bbupper := BBupper
+    snip47_captured_bblower := BBlower
+    snip47_trigger_path1 := false
+    snip47_trigger_path2 := false
+else if snip47_armed and long350 > snip47_captured_bbupper and long350 < long500 and linear_regression > 0 and points < long500 and BBbasis > long350 and close > long500 and close > BBupper
+    // Option 1: BBbasis > captured BBupper - plot 💥 at 35th line and reset
+    snip47_armed := false
+    snip47_captured_bbupper := na
+    snip47_captured_bblower := na
+    snip47_trigger_path1 := true
+    snip47_trigger_path2 := false
+    lastSignalType := "💥_Snippet47_Path1"
+else if snip47_armed and long350 < snip47_captured_bblower
+    // Option 2: BBbasis < captured BBlower - plot 💥 at 50th line and reset
+    snip47_armed := false
+    snip47_captured_bbupper := na
+    snip47_captured_bblower := na
+    snip47_trigger_path1 := false
+    snip47_trigger_path2 := true
+    lastSignalType := "💥_Snippet47_Path2"
+else
+    snip47_trigger_path1 := false
+    snip47_trigger_path2 := false
+
+// Plot Option 1: 💥 at 35th line when triggered
+plotchar(snip47_trigger_path1 ? 35 : na, "💥", "💥", location = location.absolute, color = color.white, size = size.small)
+
+// Plot Option 2: 💥 at 50th line when triggered
+//plotchar(snip47_trigger_path2 ? 9 : na, "💥", "💥", location = location.absolute, color = color.white, size = size.small)
+
+
+
+
+// =============================
+// SNIPPET 61: ❌️ - 2-Step Sequence + Phone Branch
+//   Step 1: When invalidation level (col_down) > BBupper,
+//           ma_350 > BBbasis, and close < ma_500 -> plot ❌️ at 93rd line
+//           AND immediately branch:
+//             - If ma_350 > ma_500 -> plot ☎️ at 93rd line
+//             - If ma_350 < ma_500 -> plot 📞 at 93rd line
+//           First come, first served.
+//   Step 2: Wait for invalidation level (col_down) < BBupper -> plot at 9th line
+// =============================
+
+// State variables for Snippet 61
+var bool snip61_armed = false
+var bool snip61_trigger1 = false
+var bool snip61_trigger2 = false
+
+// Branch triggers (fire once, right after Step 1)
+var bool snip61_trigger_phone  = false  // ☎️ ma_350 > ma_500
+var bool snip61_trigger_mobile = false  // 📞 ma_350 < ma_500
+
+// Step 1 condition:
+// 1. linear_regression < 0 (col_down condition)
+// 2. Invalidation level (points) > BBupper
+// 3. ma_350 > BBbasis
+// 4. close < ma_500
+snippet61_condition = linear_regression < 0 and points > BBupper and long350 > BBbasis and close < long500
+
+// Reset triggers each bar
+snip61_trigger1       := false
+snip61_trigger2       := false
+snip61_trigger_phone  := false
+snip61_trigger_mobile := false
+
+if not snip61_armed and snippet61_condition
+    // Step 1: Trigger and arm for step 2
+    snip61_armed    := true
+    snip61_trigger1 := true
+    lastSignalType  := "❌️_Snippet61_Step1"
+
+    // ---- Immediate branch: first come, first served ----
+    if BBbasis > long500
+        snip61_trigger_phone := true
+        lastSignalType       := "☎️_Snippet61"
+    else if BBbasis < long500
+        snip61_trigger_mobile := true
+        lastSignalType        := "📞_Snippet61"
+else if snip61_armed and linear_regression < 0 and points < BBupper
+    // Step 2: Invalidation level (col_down) < BBupper -> trigger and reset
+    snip61_armed    := false
+    snip61_trigger2 := true
+    lastSignalType  := "❌️_Snippet61_Step2"
+
+
+
+// Plot branch ❌ at 93rd line when ma_350 > ma_500
+//plotchar(snip61_trigger_phone ? 93 : na, "❌", "❌", location = location.absolute, color = color.rgb(251, 43, 43), size = size.normal)
+
+
+
+// =============================
+// SNIPPET 63: 🔰 - 3-Step Sequence
+//   Step 1: Wait for Snippet 61 condition (❌️)
+//   Step 2: Wait for ma_350 > ma_500, BBbasis > ma_350, close > BBupper
+//   Step 3: Wait for BBbasis < ma_350, close > ma_350 -> plot 🔰 at 35th line
+// =============================
+
+// State variables
+var int snip63_state = 0  // 0 = idle, 1 = armed by snippet61, 2 = step2 confirmed
+var bool snip63_trigger = false
+
+// Detect when Snippet 61 (❌️) is triggered
+bool snip61_triggered = snip61_trigger1
+
+// Reset trigger each bar
+snip63_trigger := false
+
+if snip63_state == 0
+    // Step 1: Wait for Snippet 61 to trigger
+    if snip61_triggered
+        snip63_state := 1
+else if snip63_state == 1
+    // Step 2: Wait for ma_350 > ma_500, BBbasis > ma_350, close > BBupper
+    if long350 > long500 and BBbasis > long350 and close > BBupper
+        snip63_state := 2
+else if snip63_state == 2
+    // Step 3: Wait for BBbasis < ma_350, close > ma_350 -> trigger
+    if BBbasis < long350 and close > long350
+        snip63_state := 0
+        snip63_trigger := true
+        lastSignalType := "🔰_Snippet63"
+
+// Plot only when trigger is true - at 35th line
+//plotchar(snip63_trigger ? 35 : na, "🔰", "🔰", location = location.absolute, color = color.aqua, size = size.small)
+
+
+
+// =============================
+// SNIPPET 64: 🚨 - 2-Step Sequence
+//   Step 1: All MAs (short_002, short_007, short_14, short_50, long_100,
+//           long_350, long_500) > fibo_0_764, EXCEPT long_200 which is
+//           the only MA < fibo_0_764  -> arm the system
+//   Step 2: Wait for long_200 > long_500 -> plot 🚨 at the 50th line
+// =============================
+
+// State variables
+var bool snip64_armed   = false
+var bool snip64_trigger = false
+
+// Step 1 condition: every MA above fibo_0_764 except long_200 (which is below)
+bool snip64_step1 = short_002 > fibo_0_764 and
+     short_007 > fibo_0_764 and
+     short_14  > fibo_0_764 and
+     short_50  > fibo_0_764 and
+     long_100  > fibo_0_764 and
+     long_200  < fibo_0_764 and
+     long_350  > fibo_0_764 and
+     long_500  > fibo_0_764
+
+// Reset trigger each bar
+snip64_trigger := false
+
+if not snip64_armed and snip64_step1
+    // Step 1: arm the system
+    snip64_armed   := true
+    snip64_trigger := false
+else if snip64_armed and long_200 > long_500
+    // Step 2: long_200 crosses above long_500 -> trigger and reset
+    snip64_armed   := false
+    snip64_trigger := true
+    lastSignalType := "🚨_Snippet64"
+
+// Plot only when trigger is true - at the 50th line
+plotchar(snip64_trigger ? 50 : na, "🚨", "🚨", location = location.absolute, color = color.red, size = size.small)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// =============================
+// SNIPPET 66: ⚓ / 🪝 - After 🔰 (snip63_trigger), check long500 vs BBupper
+//   When snip63_trigger fires:
+//     - If long500 > BBupper -> plot ⚓ at the 35th line
+//     - If long500 < BBupper -> plot 🪝 at the 35th line
+// =============================
+
+// State variables
+var bool snip66_trigger_anchor = false  // ⚓ long500 > BBupper
+var bool snip66_trigger_hook   = false  // 🪝 long500 < BBupper
+
+// Reset triggers each bar
+snip66_trigger_anchor := false
+snip66_trigger_hook   := false
+
+// Detect when 🔰 (snip63) triggers, then branch on long500 vs BBupper
+if snip63_trigger and long500 > BBupper
+    // Condition 1: long500 > BBupper -> plot ⚓
+    snip66_trigger_anchor := true
+    lastSignalType := "⚓_Snippet66"
+else if snip63_trigger and long500 < BBupper
+    // Condition 2: long500 < BBupper -> plot 🪝
+    snip66_trigger_hook := true
+    lastSignalType := "🪝_Snippet66"
+
+// // Plot ⚓ at 35th line when long500 > BBupper
+// plotchar(snip66_trigger_anchor ? 35 : na, "⚓", "⚓", location = location.absolute, color = color.blue, size = size.small)
+
+// // Plot 🪝 at 35th line when long500 < BBupper
+// plotchar(snip66_trigger_hook ? 35 : na, "🪝", "🪝", location = location.absolute, color = color.orange, size = size.small)
+
+
+
+
+// =============================
+// SNIPPET 67: 📌 - 5-Step Sequence
+//   Step 1: Wait for ⚓ (snip66_trigger_anchor) -> arm
+//   Step 2: Wait for close < BBlower
+//   Step 3: Wait for close > BBupper -> transition to Step 4 (no plot)
+//   Step 4: Wait for ma_350 < ma_500
+//   Step 5: Wait for ma_350 > ma_500 -> plot 📌 at the 35th line (ONLY PLOT)
+// =============================
+
+// State variables
+var int  snip67_state   = 0   // 0 = idle, 1 = armed by ⚓, 2 = step2 confirmed, 3 = step3 confirmed, 4 = step4 confirmed
+var bool snip67_trigger = false
+
+// Reset trigger each bar
+snip67_trigger := false
+
+if snip67_state == 0
+    // Step 1: Wait for ⚓ (snip66_trigger_anchor) to trigger
+    if snip66_trigger_anchor
+        snip67_state := 1
+else if snip67_state == 1
+    // Step 2: Wait for close < BBlower
+    if close < BBlower
+        snip67_state := 2
+else if snip67_state == 2
+    // Step 3: Wait for close > BBupper -> transition to Step 4 (NO plot)
+    if close > BBupper
+        snip67_state := 3
+else if snip67_state == 3
+    // Step 4: Wait for ma_350 < ma_500
+    if long350 < long500
+        snip67_state := 4
+else if snip67_state == 4
+    // Step 5: Wait for ma_350 > ma_500 -> trigger and reset
+    if long350 > long500
+        snip67_state   := 0
+        snip67_trigger := true
+        lastSignalType := "📌_Snippet67"
+
+// Plot ONLY when Step 5 triggers - at the 35th line
+//plotchar(snip67_trigger ? 35 : na, "📌", "📌", location = location.absolute, color = color.purple, size = size.small)
+
+
+
+
+// =============================
+// SNIPPET 68: 🎤 / 🔰 - After 🪝 (snip66_trigger_hook), branch on BBbasis vs long500
+//   When snip66_trigger_hook fires:
+//     - If BBbasis > long500 -> plot 🎤 at the 35th line
+//     - If BBbasis < long500 -> plot 🔰 at the 35th line
+// =============================
+
+// State variables
+var bool snip68_trigger_mic   = false  // 🎤 BBbasis > long500
+var bool snip68_trigger_comet = false  // 🔰 BBbasis < long500
+
+// Reset triggers each bar
+snip68_trigger_mic   := false
+snip68_trigger_comet := false
+
+// Detect when 🪝 (snip66) triggers, then branch on BBbasis vs long500
+if snip66_trigger_hook and BBbasis > long500
+    // Condition 1: BBbasis > long500 -> plot 🎤
+    snip68_trigger_mic := true
+    lastSignalType := "🎤_Snippet68"
+else if snip66_trigger_hook and BBbasis < long500
+    // Condition 2: BBbasis < long500 -> plot 🔰
+    snip68_trigger_comet := true
+    lastSignalType := "🔰_Snippet68"
+
+
+
+// =============================
+// SNIPPET 69: ☢️ - 3-Step Sequence
+//   Step 1: When invalidation level (col_up) < BBlower,
+//           close > BBupper -> arm the system
+//   Step 2: Wait for ma_350 < ma_500 and BBbasis < long500 and close < long500
+//   Step 3: Wait for rsi_ma50 < 35 -> plot ☢️ at the 93rd line
+// =============================
+
+// State variables
+var int  snip69_state   = 0   // 0 = idle, 1 = armed by step1, 2 = step2 confirmed
+var bool snip69_trigger = false
+
+// Step 1 condition:
+// 1. linear_regression > 0 (col_up condition)
+// 2. Invalidation level (points) < BBlower
+// 3. close > BBupper
+bool snip69_step1 = linear_regression > 0 and points < BBlower and close > BBupper
+
+// Reset trigger each bar
+snip69_trigger := false
+
+if snip69_state == 0
+    // Step 1: Arm the system
+    if snip69_step1
+        snip69_state := 1
+else if snip69_state == 1
+    // Step 2: Wait for ma_350 < ma_500 and BBbasis < long500 and close < long500
+    if long350 < long500 and BBbasis < long500 and close < long500
+        snip69_state := 2
+else if snip69_state == 2
+    // Step 3: Wait for rsi_ma50 < 35 -> trigger and reset
+    if rsi_ma50 < 100
+        snip69_state   := 0
+        snip69_trigger := true
+        lastSignalType := "☢️_Snippet69"
+
+
+
+// =============================
+// SNIPPET 70: 📛 - 4-Step Sequence
+//   Step 1: When ma_500 < BBlower and close > BBupper -> arm the system
+//   Step 2: Wait for ma_350 < ma_500 and close < ma_500
+//   Step 3: Wait for rsi_ma50 < 35 -> plot 📛 at the 93rd line
+// =============================
+
+// State variables
+var int  snip70_state   = 0   // 0 = idle, 1 = armed by step1, 2 = step2 confirmed
+var bool snip70_trigger = false
+
+// Step 1 condition:
+// 1. ma_500 < BBlower
+// 2. close > BBupper
+bool snip70_step1 = long500 < BBlower and close > BBupper
+
+// Reset trigger each bar
+snip70_trigger := false
+
+if snip70_state == 0
+    // Step 1: Arm the system
+    if snip70_step1
+        snip70_state := 1
+else if snip70_state == 1
+    // Step 2: Wait for ma_350 < ma_500 and close < ma_500
+    if long350 < long500 and close < long500 and BBbasis < long500
+        snip70_state := 2
+else if snip70_state == 2
+    // Step 3: Wait for rsi_ma50 < 35 -> trigger and reset
+    if rsi_ma50 < 35
+        snip70_state   := 0
+        snip70_trigger := true
+        lastSignalType := "📛_Snippet70"
+
+
+
+
+
+
+
+
+// =============================
+// SNIPPET 72: 🎯 - 3-Step Sequence (UPDATED)
+//   Step 1: Wait for ☢️ (snip69_trigger) to fire
+//           AND invalidation level (col_up) < BBlower -> arm
+//   Step 2: Wait for rsi_ma50 > 65 -> confirm
+//   Step 3: Wait for rsi > 93 -> confirm
+//   Step 4: Plot 🎯 at the 35th line
+// =============================
+
+// State variables
+var int  snip72_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed
+var bool snip72_trigger = false
+
+// Reset trigger each bar
+snip72_trigger := false
+
+// Step 1 condition: snip69 fired AND invalidation level (col_up) < BBlower
+bool snip72_condition = snip69_trigger and linear_regression > 0 and points < BBlower and close > BBlower
+
+if snip72_state == 0
+    // Step 1: Wait for ☢️ (snip69_trigger) + col_up invalidation level < BBlower -> arm
+    if snip72_condition
+        snip72_state := 1
+else if snip72_state == 1
+    // Step 2: Wait for rsi_ma50 > 65 -> confirm
+    if rsi_ma50 > 65
+        snip72_state := 2
+else if snip72_state == 2
+    // Step 3: Wait for rsi > 93 -> confirm
+    if rsi > 93
+        snip72_state := 3
+else if snip72_state == 3
+    // Step 4: Plot 🎯 at the 35th line and reset
+    snip72_state   := 0
+    snip72_trigger := true
+    lastSignalType := "🎯_Snippet72"
+
+// Plot ONLY when Step 3 triggers - at the 35th line
+plotchar(snip72_trigger ? 9 : na, "🎯", "🎯", location = location.absolute, color = color.green, size = size.small)
+
+
+
+// =============================
+// SNIPPET 73: 💡 - 3-Step Sequence
+//   Step 1: Wait for ☢️ (snip69_trigger) to fire
+//           AND invalidation level (col_up) > BBlower -> arm
+//   Step 2: Wait for BBbasis > ma_500 and close > BBupper
+//   Step 3: Plot 💡 at the 35th line (ONLY PLOT)
+// =============================
+
+// State variables
+var int  snip73_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed
+var bool snip73_trigger = false
+
+// Reset trigger each bar
+snip73_trigger := false
+
+// Step 1 condition: snip69 fired AND invalidation level (col_up) > BBlower
+bool snip73_step1 = snip69_trigger and linear_regression > 0 and points > BBlower
+
+if snip73_state == 0
+    // Step 1: Arm the system
+    if snip73_step1
+        snip73_state := 1
+else if snip73_state == 1
+    // Step 2: Wait for BBbasis > ma_500 and close > BBupper
+    if BBbasis > long500 and long350 > long500 and close > BBupper
+        snip73_state := 2
+else if snip73_state == 2
+    // Step 3: Trigger and reset
+    snip73_state   := 0
+    snip73_trigger := true
+    lastSignalType := "💡_Snippet73"
+
+// Plot ONLY when Step 3 triggers - at the 35th line
+//plotchar(snip73_trigger ? 35 : na, "💡", "💡", location = location.absolute, color = color.yellow, size = size.small)
+
+
+
+
+// =============================
+// SNIPPET 74: 🔔 - 2-Step Sequence
+//   Step 1: Wait for ☢️ (snip69_trigger) to fire
+//           AND invalidation level (col_down) < BBupper -> arm
+//   Step 2: Plot 🔔 at the 93rd line
+// =============================
+
+// State variables
+var bool snip74_trigger = false
+
+// Reset trigger each bar
+snip74_trigger := false
+
+// Condition: snip69 fired AND invalidation level (col_down) < BBupper
+bool snip74_condition = snip69_trigger and linear_regression < 0 and points < BBupper
+
+if snip74_condition
+    // Step 1 & 2: Trigger and plot 🔔 at the 93rd line
+    snip74_trigger := true
+    lastSignalType := "🔔_Snippet74"
+
+// Plot 🔔 at the 93rd line when triggered
+//plotchar(snip74_trigger ? 35 : na, "🔔", "🔔", location = location.absolute, color = color.red, size = size.small)
+
+
+
+
+
+// =============================
+// SNIPPET 76: 🌟 - 3-Step Sequence
+//   Step 1: Wait for 📛 (snip70_trigger) to fire
+//           AND invalidation level (col_down) > ma_500 -> arm
+//   Step 2: Wait for BBbasis > ma_500 and close > BBupper
+//   Step 3: Plot 🌟 at the 35th line (ONLY PLOT)
+// =============================
+
+// State variables
+var int  snip76_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed
+var bool snip76_trigger = false
+
+// Reset trigger each bar
+snip76_trigger := false
+
+// Step 1 condition: snip70 fired AND invalidation level (col_down) > ma_500
+bool snip76_step1 = snip70_trigger and linear_regression < 0 and points > long500
+
+if snip76_state == 0
+    // Step 1: Arm the system
+    if snip76_step1
+        snip76_state := 1
+else if snip76_state == 1
+    // Step 2: Wait for BBbasis > ma_500 and close > BBupper
+    if BBbasis > long500 and close > BBupper
+        snip76_state := 2
+else if snip76_state == 2
+    // Step 3: Trigger and reset
+    snip76_state   := 0
+    snip76_trigger := true
+    lastSignalType := "🌟_Snippet76"
+
+// Plot ONLY when Step 3 triggers - at the 35th line
+//plotchar(snip76_trigger ? 35 : na, "🌟", "🌟", location = location.absolute, color = color.yellow, size = size.small)
+
+
+
+// =============================
+// SNIPPET 78: 💀 - 2-Step Sequence
+//   Step 1: Wait for 📛 (snip70_trigger) to fire
+//           AND invalidation level (col_up) < BBupper -> arm
+//   Step 2: Plot 💀 at the 50th line
+// =============================
+
+// State variables
+var bool snip78_trigger = false
+
+// Reset trigger each bar
+snip78_trigger := false
+
+// Condition: snip70 fired AND invalidation level (col_up) < BBupper
+bool snip78_condition = snip70_trigger and linear_regression > 0 and points < BBupper
+
+if snip78_condition
+    // Step 1 & 2: Trigger and plot 💀 at the 50th line
+    snip78_trigger := true
+    lastSignalType := "💀_Snippet78"
+
+
+
+
+
+// =============================
+// SNIPPET 79: 🔶 - 3-Step Sequence (UPDATED)
+//   Step 1: Wait for 💀 (snip78_trigger) to fire -> arm
+//   Step 2: Wait for BBbasis > ma_500 and close > BBupper -> confirm
+//   Step 3: Wait for rsi_ma50 > 65 -> plot 🔶 at the 35th line
+// =============================
+
+// State variables
+var int  snip79_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed
+var bool snip79_trigger = false
+
+// Reset trigger each bar
+snip79_trigger := false
+
+if snip79_state == 0
+    // Step 1: Wait for 💀 (snip78_trigger) to fire -> arm
+    if snip78_trigger
+        snip79_state := 1
+else if snip79_state == 1
+    // Step 2: Wait for BBbasis > ma_500 and close > BBupper -> confirm
+    if BBbasis > long500 and close > BBupper
+        snip79_state := 2
+else if snip79_state == 2
+    // Step 3: Wait for rsi_ma50 > 65 -> trigger and reset
+    if rsi_ma50 > 0
+        snip79_state   := 0
+        snip79_trigger := true
+        lastSignalType := "🔶_Snippet79"
+
+// Plot ONLY when Step 3 triggers - at the 35th line
+// plotchar(snip79_trigger ? 35 : na, "🔶", "🔶", location = location.absolute, color = color.orange, size = size.small)
+
+
+
+// =============================
+// SNIPPET 82: ⚠️ - 3-Step Sequence (UPDATED)
+//   Step 1: Wait for ma_350 > BBupper, ma_500 < BBupper, close < BBlower -> arm
+//   Step 2: Wait for rsi_ma50 > 65 -> confirm
+//   Step 3: Wait for rsi_ma50 < 35 -> confirm
+//   Step 4: Plot ⚠️ at the 93rd line
+// =============================
+
+// State variables
+var int  snip82_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed, 3 = step3 confirmed
+var bool snip82_trigger = false
+
+// Reset trigger each bar
+snip82_trigger := false
+
+// Step 1 condition: ma_350 > BBupper, ma_500 < BBupper, close < BBlower
+bool snip82_step1 = long350 > BBupper and long500 < BBupper and close < BBlower
+
+if snip82_state == 0
+    // Step 1: Arm the system
+    if snip82_step1
+        snip82_state := 1
+else if snip82_state == 1
+    // Step 2: Wait for rsi_ma50 > 65 -> confirm
+    if rsi_ma50 > 65
+        snip82_state := 2
+else if snip82_state == 2
+    // Step 3: Wait for rsi_ma50 < 35 -> confirm
+    if rsi_ma50 < 35
+        snip82_state := 3
+else if snip82_state == 3
+    // Step 4: Plot ⚠️ at the 93rd line and reset
+    snip82_state   := 0
+    snip82_trigger := true
+    lastSignalType := "⚠️_Snippet82"
+
+// Plot ⚠️ at the 93rd line when triggered
+plotchar(snip82_trigger ? 93 : na, "⚠️", "⚠️", location = location.absolute, color = color.orange, size = size.small)
+
+// =============================
+// SNIPPET 83: 🔱 - 2-Step Sequence
+//   Step 1: Wait for rsi_ma50 > 70 -> arm
+//   Step 2: Wait for BBbasis < ma_500 -> plot 🔱 at the 93rd line
+// =============================
+
+// State variables
+var int  snip83_state   = 0   // 0 = idle, 1 = armed (rsi_ma50 > 70)
+var bool snip83_trigger = false
+
+// Reset trigger each bar
+snip83_trigger := false
+
+if snip83_state == 0
+    // Step 1: Wait for rsi_ma50 > 70 -> arm
+    if rsi_ma50 > 70 and BBbasis > long500
+        snip83_state := 1
+else if snip83_state == 1
+    // Step 2: Wait for BBbasis < ma_500 -> trigger and reset
+    if rsi_ma50 < 35 and BBbasis > long500
+        snip83_state   := 0
+        snip83_trigger := true
+        lastSignalType := "🔱_Snippet83"
+
+// Plot ONLY when Step 2 triggers - at the 93rd line
+//plotchar(snip83_trigger ? 93 : na, "🔱", "🔱", location = location.absolute, color = color.aqua, size = size.small)
+
+
+
+// =============================
+// SNIPPET 84: 🔻 - 3-Step Sequence (UPDATED)
+//   Step 1: Wait for ma_350 < BBupper, ma_500 > BBupper, close < BBlower -> arm
+//   Step 2: Wait for BBbasis > ma_500, ma_350 > ma_500, close > BBupper
+//   Step 3: Wait for rsi_ma50 > 65 -> plot 🔷 at the 9th line
+// =============================
+
+// State variables
+var int  snip84_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed
+var bool snip84_trigger = false
+
+// Reset trigger each bar
+snip84_trigger := false
+
+// Step 1 condition: ma_350 < BBupper, ma_500 > BBupper, close < BBlower
+bool snip84_step1 = long350 < BBupper and long500 > BBupper and close < BBlower
+
+if snip84_state == 0
+    // Step 1: Arm the system
+    if snip84_step1
+        snip84_state := 1
+else if snip84_state == 1
+    // Step 2: Wait for BBbasis > ma_500, ma_350 > ma_500, close > BBupper
+    if BBbasis > long500 and long350 > long500 and close > BBupper
+        snip84_state := 2
+else if snip84_state == 2
+    // Step 3: Wait for rsi_ma50 > 65 -> trigger and reset
+    if rsi_ma50 > 65
+        snip84_state   := 0
+        snip84_trigger := true
+        lastSignalType := "🔻_Snippet84"
+
+// Plot ONLY when Step 3 triggers - at the 9th line
+//plotchar(snip84_trigger ? 9 : na, "🔷", "🔷", location = location.absolute, color = color.red, size = size.small)
+
+// =============================
+// BACKGROUND FILL SWAP: red on 🚨 (snip64), green on 🐧 (snip65)
+// =============================
+var int bgState = 0
+
+if snip64_trigger 
+    bgState := 1
+if snippet1_condition
+    bgState := 2
+
+bgColor = bgState == 1 ? color.new(color.red, 85)   :
+          bgState == 2 ? color.new(color.green, 100) :
+                         color.new(#9a15ff, 97)
+
+fill(band1, band0, color = bgColor, title = 'Background')
+
+
+
+
+// =============================
+// SNIPPET 86: 👽 - 5-Step Sequence
+//   Step 1: Wait for ma_500 < BBlower and close > BBlower -> arm
+//   Step 2: Wait for rsi_ma50 > 65
+//   Step 3: Wait for rsi_ma50 < 35
+//   Step 4: Wait for rsi_ma50 > 53
+//   Step 5: Wait for rsi_ma50 < 50 -> plot 👽 at the 93rd line
+// =============================
+
+// State variables
+var int  snip86_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed, 3 = step3 confirmed, 4 = step4 confirmed
+var bool snip86_trigger = false
+
+// Reset trigger each bar
+snip86_trigger := false
+
+// Step 1 condition: ma_500 < BBlower and close > BBlower
+bool snip86_step1 = long500 < BBlower and close > BBlower
+
+if snip86_state == 0
+    // Step 1: Arm the system
+    if snip86_step1
+        snip86_state := 1
+else if snip86_state == 1
+    // Step 2: Wait for rsi_ma50 > 65
+    if rsi_ma50 > 65
+        snip86_state := 2
+else if snip86_state == 2
+    // Step 3: Wait for rsi_ma50 < 35
+    if rsi_ma50 < 35
+        snip86_state := 3
+else if snip86_state == 3
+    // Step 4: Wait for rsi_ma50 > 53
+    if rsi_ma50 > 53
+        snip86_state := 4
+else if snip86_state == 4
+    // Step 5: Wait for rsi_ma50 < 50 -> trigger and reset
+    if rsi_ma50 < 50
+        snip86_state   := 0
+        snip86_trigger := true
+        lastSignalType := "👽_Snippet86"
+
+// Plot ONLY when Step 5 triggers - at the 93rd line
+//plotchar(snip86_trigger ? 93 : na, "👽", "👽", location = location.absolute, color = color.red, size = size.small)
+
+
+
+// =============================
+// SNIPPET 85: ☠️ - 5-Step Sequence
+//   Step 1: Wait for ma_500 < BBlower and close > BBupper -> arm
+//   Step 2: Wait for rsi_ma50 > 65
+//   Step 3: Wait for rsi_ma50 < 35
+//   Step 4: Wait for rsi_ma50 > 53
+//   Step 5: Wait for rsi_ma50 < 50 -> plot ☠️ at the 93rd line
+// =============================
+
+// State variables
+var int  snip85_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed, 3 = step3 confirmed, 4 = step4 confirmed
+var bool snip85_trigger = false
+
+// Reset trigger each bar
+snip85_trigger := false
+
+// Step 1 condition: ma_500 < BBlower and close > BBupper
+bool snip85_step1 = long500 < BBlower and close > BBupper
+
+if snip85_state == 0
+    // Step 1: Arm the system
+    if snip85_step1
+        snip85_state := 1
+else if snip85_state == 1
+    // Step 2: Wait for rsi_ma50 > 65
+    if rsi_ma50 > 65
+        snip85_state := 2
+else if snip85_state == 2
+    // Step 3: Wait for rsi_ma50 < 35
+    if rsi_ma50 < 35
+        snip85_state := 3
+else if snip85_state == 3
+    // Step 4: Wait for rsi_ma50 > 53
+    if rsi_ma50 > 53
+        snip85_state := 4
+else if snip85_state == 4
+    // Step 5: Wait for rsi_ma50 < 50 -> trigger and reset
+    if rsi_ma50 < 50
+        snip85_state   := 0
+        snip85_trigger := true
+        lastSignalType := "☠️_Snippet85"
+
+// Plot ONLY when Step 5 triggers - at the 93rd line
+//plotchar(snip85_trigger ? 93 : na, "☠️", "☠️", location = location.absolute, color = color.red, size = size.small)
+
+
+// =============================
+// SNIPPET 89: 👽 - 3-Step Sequence
+//   Step 1: Wait for snip86_trigger AND invalidation level (col_down) < BBupper -> arm
+//   Step 2: Wait for rsi_ma50 > 65
+//   Step 3: Wait for rsi_ma50 < 35 -> plot 👽 at the 75th line
+// =============================
+
+// State variables
+var int  snip89_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed
+var bool snip89_trigger = false
+
+// Reset trigger each bar
+snip89_trigger := false
+
+// Step 1 condition: snip86 fired AND invalidation level (col_down) < BBupper
+bool snip89_step1 = snip86_trigger and linear_regression < 0 and points < BBupper
+
+if snip89_state == 0
+    // Step 1: Arm the system
+    if snip89_step1
+        snip89_state := 1
+else if snip89_state == 1
+    // Step 2: Wait for rsi_ma50 > 65
+    if rsi_ma50 > 65
+        snip89_state := 2
+else if snip89_state == 2
+    // Step 3: Wait for rsi_ma50 < 35 -> trigger and reset
+    if rsi_ma50 < 35
+        snip89_state   := 0
+        snip89_trigger := true
+        lastSignalType := "👽_Snippet89"
+
+// Plot ONLY when Step 3 triggers - at the 75th line
+//plotchar(snip89_trigger ? 75 : na, "👽", "👽", location = location.absolute, color = color.red, size = size.small)
+
+
+// =============================
+// SNIPPET 88: ☠️ - 3-Step Sequence
+//   Step 1: Wait for snip85_trigger AND invalidation level (col_down) < BBupper -> arm
+//   Step 2: Wait for rsi_ma50 > 65
+//   Step 3: Wait for rsi_ma50 < 35 -> plot ☠️ at the 75th line
+// =============================
+
+// State variables
+var int  snip88_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed
+var bool snip88_trigger = false
+
+// Reset trigger each bar
+snip88_trigger := false
+
+// Step 1 condition: snip85 fired AND invalidation level (col_down) < BBupper
+bool snip88_step1 = snip85_trigger and linear_regression < 0 and points < BBupper
+
+if snip88_state == 0
+    // Step 1: Arm the system
+    if snip88_step1
+        snip88_state := 1
+else if snip88_state == 1
+    // Step 2: Wait for rsi_ma50 > 65
+    if rsi_ma50 > 65
+        snip88_state := 2
+else if snip88_state == 2
+    // Step 3: Wait for rsi_ma50 < 35 -> trigger and reset
+    if rsi_ma50 < 35
+        snip88_state   := 0
+        snip88_trigger := true
+        lastSignalType := "☠️_Snippet88"
+
+// Plot ONLY when Step 3 triggers - at the 75th line
+//plotchar(snip88_trigger ? 75 : na, "☠️", "☠️", location = location.absolute, color = color.red, size = size.small)
+
+
+// =============================
+// SNIPPET 90: 👽 - Single Condition
+//   Condition: snip86_trigger AND invalidation level (col_up) < BBupper
+//   -> plot 👽 at the 93rd line
+// =============================
+
+// Trigger variable
+var bool snip90_trigger = false
+
+// Reset trigger each bar
+snip90_trigger := false
+
+// Condition: snip86 fired AND invalidation level (col_up) < BBupper
+bool snip90_condition = snip86_trigger and linear_regression > 0 and points < BBupper
+
+if snip90_condition
+    snip90_trigger := true
+    lastSignalType := "👽_Snippet90"
+
+// Plot 👽 at the 93rd line when triggered
+//plotchar(snip90_trigger ? 93 : na, "👽", "👽", location = location.absolute, color = color.red, size = size.small)
+
+
+
+// =============================
+// SNIPPET 91: ☠️ - Single Condition
+//   Condition: snip85_trigger AND invalidation level (col_up) < BBupper
+//   -> plot ☠️ at the 93rd line
+// =============================
+
+// Trigger variable
+var bool snip91_trigger = false
+
+// Reset trigger each bar
+snip91_trigger := false
+
+// Condition: snip85 fired AND invalidation level (col_up) < BBupper
+bool snip91_condition = snip85_trigger and linear_regression > 0 and points < BBupper
+
+if snip91_condition
+    snip91_trigger := true
+    lastSignalType := "☠️_Snippet91"
+
+// Plot ☠️ at the 93rd line when triggered
+//plotchar(snip91_trigger ? 93 : na, "☠️", "☠️", location = location.absolute, color = color.red, size = size.small)
+
+
+
+
+/// =============================
+// SNIPPET 94: 🌙 - 2-Step Sequence (UPDATED)
+//   Step 1: Wait for snip61_trigger_phone (☎️) -> arm
+//   Step 2: Wait for rsi_ma50 > 65 -> plot 🌙 at the 35th line
+// =============================
+
+// State variables
+var int  snip94_state   = 0   // 0 = idle, 1 = armed
+var bool snip94_trigger = false
+
+// Reset trigger each bar
+snip94_trigger := false
+
+if snip94_state == 0
+    // Step 1: Wait for ☎️ (snip61_trigger_phone) to fire -> arm
+    if snip61_trigger_phone
+        snip94_state := 1
+else if snip94_state == 1
+    // Step 2: Wait for rsi_ma50 > 65 -> trigger and reset
+    if rsi_ma50 > 65 and long350 > long500
+        snip94_state   := 0
+        snip94_trigger := true
+        lastSignalType := "🌙_Snippet94"
+
+// Plot 🌙 at the 35th line when triggered
+plotchar(snip94_trigger ? 9 : na, "🌙", "🌙", location = location.absolute, color = color.yellow, size = size.small)
+
+
+// =============================
+// SNIPPET 95: ⛔ - 4-Step Sequence (UPDATED)
+//   Step 1: Wait for snip61_trigger_phone (☎️) -> arm
+//   Step 2: Wait for rsi_ma50 < 33
+//   Step 3: Wait for rsi_ma50 > 55
+//   Step 4: Wait for rsi_ma50 < 50 -> plot ⛔ at the 93rd line
+// =============================
+
+// State variables
+var int  snip95_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed, 3 = step3 confirmed
+var bool snip95_trigger = false
+
+// Reset trigger each bar
+snip95_trigger := false
+
+if snip95_state == 0
+    // Step 1: Wait for ☎️ (snip61_trigger_phone) to fire -> arm
+    if snip61_trigger_phone
+        snip95_state := 1
+else if snip95_state == 1
+    // Step 2: Wait for rsi_ma50 < 33 -> confirm
+    if rsi_ma50 < 37
+        snip95_state := 2
+else if snip95_state == 2
+    // Step 3: Wait for rsi_ma50 > 55 -> confirm
+    if rsi_ma50 > 1
+        snip95_state := 3
+else if snip95_state == 3
+    // Step 4: Wait for rsi_ma50 < 50 -> trigger and reset
+    if rsi_ma50 < 100
+        snip95_state   := 0
+        snip95_trigger := true
+        lastSignalType := "⛔_Snippet95"
+
+// Plot ⛔ at the 93rd line when triggered
+//plotchar(snip95_trigger ? 93 : na, "⛔", "⛔", location = location.absolute, color = color.red, size = size.small)
+
+
+
+
+// =============================
+// SNIPPET 97: 🏆 - 3-Step Sequence
+//   Step 1: Wait for rsi_ma50 > 65 -> arm
+//   Step 2: Wait for rsi_ma50 < 50 -> confirm
+//   Step 3: Plot 🏆 at the 93rd line
+// =============================
+
+// State variables
+var int  snip97_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed
+var bool snip97_trigger = false
+
+// Reset trigger each bar
+snip97_trigger := false
+
+if snip97_state == 0
+    // Step 1: Wait for rsi_ma50 > 65 -> arm
+    if rsi_ma50 > 74
+        snip97_state := 1
+else if snip97_state == 1
+    // Step 2: Wait for rsi_ma50 < 50 -> confirm
+    if rsi_ma50 < 37
+        snip97_state := 2
+else if snip97_state == 2
+    // Step 3: Plot 🏆 at the 93rd line and reset
+    snip97_state   := 0
+    snip97_trigger := true
+    lastSignalType := "🏆_Snippet97"
+
+// Plot 🏆 at the 93rd line when triggered
+//plotchar(snip97_trigger ? 93 : na, "🏆", "🏆", location = location.absolute, color = color.yellow, size = size.small)
+
+
+
+// =============================
+// SNIPPET 99: ☠️ - 3-Step Sequence
+//   Step 1: Wait for snip79_trigger AND invalidation level (col_down) < BBupper -> arm
+//   Step 2: Wait for rsi_ma50 < 36
+//   Step 3: Plot ☠️ at the 93rd line
+// =============================
+
+// State variables
+var int  snip99_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed
+var bool snip99_trigger = false
+
+// Reset trigger each bar
+snip99_trigger := false
+
+// Step 1 condition: snip79 fired AND invalidation level (col_down) < BBupper
+bool snip99_step1 = snip79_trigger and linear_regression < 0 and points < BBupper
+
+if snip99_state == 0
+    // Step 1: Arm the system
+    if snip99_step1
+        snip99_state := 1
+else if snip99_state == 1
+    // Step 2: Wait for rsi_ma50 < 36 -> confirm
+    if rsi_ma50 < 36
+        snip99_state := 2
+else if snip99_state == 2
+    // Step 3: Plot ☣️ at the 93rd line and reset
+    snip99_state   := 0
+    snip99_trigger := true
+    lastSignalType := "☣️_Snippet99"
+
+// Plot ☠️ at the 93rd line when triggered
+plotchar(snip99_trigger ? 93 : na, "☣️", "☣️", location = location.absolute, color = color.red, size = size.small)
+
+
+// =============================
+// SNIPPET 100: 🚧 - 3-Step Sequence
+//   Step 1: Wait for snip79_trigger AND invalidation level (col_up) > ma_500 -> arm
+//   Step 2: Wait for rsi_ma50 < 36
+//   Step 3: Plot 🚧 at the 93rd line
+// =============================
+
+// State variables
+var int  snip100_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed
+var bool snip100_trigger = false
+
+// Reset trigger each bar
+snip100_trigger := false
+
+// Step 1 condition: snip79 fired AND invalidation level (col_up) > ma_500
+bool snip100_step1 = snip79_trigger and linear_regression > 0 and points > long500
+
+if snip100_state == 0
+    // Step 1: Arm the system
+    if snip100_step1
+        snip100_state := 1
+else if snip100_state == 1
+    // Step 2: Wait for rsi_ma50 < 36 -> confirm
+    if rsi_ma50 < 36
+        snip100_state := 2
+else if snip100_state == 2
+    // Step 3: Plot 🚧 at the 93rd line and reset
+    snip100_state   := 0
+    snip100_trigger := true
+    lastSignalType := "🚧_Snippet100"
+
+// Plot 🚧 at the 93rd line when triggered
+plotchar(snip100_trigger ? 93 : na, "🚧", "🚧", location = location.absolute, color = color.orange, size = size.small)
+
+
+
+// =============================
+// SNIPPET 102: 🎶 - 2-Step Sequence
+//   Step 1: Wait for snip84_trigger AND invalidation level (col_down) < BBupper -> arm
+//   Step 2: Plot 🎶 at the 9th line
+// =============================
+
+// State variables
+var int  snip102_state   = 0   // 0 = idle, 1 = armed
+var bool snip102_trigger = false
+
+// Reset trigger each bar
+snip102_trigger := false
+
+// Step 1 condition: snip84 fired AND invalidation level (col_down) < BBupper
+bool snip102_step1 = snip84_trigger and linear_regression < 0 and points > long500
+
+if snip102_state == 0
+    // Step 1: Arm the system
+    if snip102_step1
+        snip102_state := 1
+else if snip102_state == 1
+    // Step 2: Plot 🎶 at the 9th line and reset
+    snip102_state   := 0
+    snip102_trigger := true
+    lastSignalType := "🎶_Snippet102"
+
+// Plot 🎶 at the 9th line when triggered
+plotchar(snip102_trigger ? 9 : na, "🎶", "🎶", location = location.absolute, color = color.yellow, size = size.normal)
+
+
+
+
+// =============================
+// SNIPPET 104: 🔱 - 4-Step Sequence
+//   Step 1: Wait for snip83_trigger AND invalidation level (col_up) < BBupper -> arm
+//   Step 2: Wait for rsi_ma50 > 66
+//   Step 3: Wait for rsi_ma50 < 35
+//   Step 4: Plot 🔱 at the 75th line
+// =============================
+
+// State variables
+var int  snip104_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed, 3 = step3 confirmed
+var bool snip104_trigger = false
+
+// Reset trigger each bar
+snip104_trigger := false
+
+// Step 1 condition: snip83 fired AND invalidation level (col_up) < BBupper
+bool snip104_step1 = snip83_trigger and linear_regression > 0 and points < BBupper
+
+if snip104_state == 0
+    // Step 1: Arm the system
+    if snip104_step1
+        snip104_state := 1
+else if snip104_state == 1
+    // Step 2: Wait for rsi_ma50 > 66 -> confirm
+    if rsi_ma50 > 66
+        snip104_state := 2
+else if snip104_state == 2
+    // Step 3: Wait for rsi_ma50 < 35 -> confirm
+    if rsi_ma50 < 35
+        snip104_state := 3
+else if snip104_state == 3
+    // Step 4: Plot 🔱 at the 75th line and reset
+    snip104_state   := 0
+    snip104_trigger := true
+    lastSignalType := "🔱_Snippet104"
+
+// Plot 🔱 at the 75th line when triggered
+//plotchar(snip104_trigger ? 75 : na, "🔱", "🔱", location = location.absolute, color = color.aqua, size = size.small)
+
+
+// =============================
+// SNIPPET 105: 🔱 - 5-Step Sequence (UPDATED)
+//   Step 1: Wait for snip83_trigger AND invalidation level (col_down) < BBupper AND ma_500 < BBlower -> arm
+//   Step 2: Wait for rsi_ma50 > 66
+//   Step 3: Wait for rsi_ma50 < 35
+//   Step 4: Wait for BBbasis < ma_350 and ma_350 < ma_500
+//   Step 5: Plot 🔱 at the 93rd line
+// =============================
+
+// State variables
+var int  snip105_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed, 3 = step3 confirmed, 4 = step4 confirmed
+var bool snip105_trigger = false
+
+// Reset trigger each bar
+snip105_trigger := false
+
+// Step 1 condition: snip83 fired AND invalidation level (col_down) < BBupper AND ma_500 < BBlower
+bool snip105_step1 = snip83_trigger and linear_regression < 0 and points < BBupper and long500 < BBlower
+
+if snip105_state == 0
+    // Step 1: Arm the system
+    if snip105_step1
+        snip105_state := 1
+else if snip105_state == 1
+    // Step 2: Wait for rsi_ma50 > 66 -> confirm
+    if rsi_ma50 > 66
+        snip105_state := 2
+else if snip105_state == 2
+    // Step 3: Wait for rsi_ma50 < 35 -> confirm
+    if rsi_ma50 < 35
+        snip105_state := 3
+else if snip105_state == 3
+    // Step 4: Wait for BBbasis < ma_350 and ma_350 < ma_500 -> confirm
+    if BBbasis < long350 and long350 > long500
+        snip105_state := 4
+else if snip105_state == 4
+    // Step 5: Plot 🔱 at the 93rd line and reset
+    snip105_state   := 0
+    snip105_trigger := true
+    lastSignalType := "🔱_Snippet105"
+
+// Plot 🔱 at the 93rd line when triggered
+//plotchar(snip105_trigger ? 93 : na, "🔱", "🔱", location = location.absolute, color = color.aqua, size = size.small)
+
+
+
+// =============================
+// SNIPPET 107: 🌟 - 3-Step Sequence
+//   Step 1: Wait for 🌟 (snip76_trigger) to fire
+//           AND invalidation level (col_up) > ma_500 -> arm
+//   Step 2: Wait for ma_350 < ma_500 -> confirm
+//   Step 3: Plot 🌟 at the 35th line
+// =============================
+
+// State variables
+var int  snip107_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed
+var bool snip107_trigger = false
+
+// Reset trigger each bar
+snip107_trigger := false
+
+// Step 1 condition: snip76 fired AND invalidation level (col_up) > ma_500
+bool snip107_step1 = snip76_trigger and linear_regression > 0 and points > long500
+
+if snip107_state == 0
+    // Step 1: Arm the system
+    if snip107_step1
+        snip107_state := 1
+else if snip107_state == 1
+    // Step 2: Wait for ma_350 < ma_500 -> confirm
+    if long350 < long500
+        snip107_state := 2
+else if snip107_state == 2
+    // Step 3: Plot 🌟 at the 35th line and reset
+    snip107_state   := 0
+    snip107_trigger := true
+    lastSignalType := "🌟_Snippet107"
+
+// Plot 🌟 at the 35th line when triggered
+plotchar(snip107_trigger ? 35 : na, "🌟", "🌟", location = location.absolute, color = color.yellow, size = size.small)
+
+
+// =============================
+// SNIPPET 108: 🌟 - 2-Step Sequence
+//   Step 1: Wait for 🌟 (snip76_trigger) to fire
+//           AND invalidation level (col_up) < ma_500 -> arm
+//   Step 2: Plot 🌟 at the 9th line
+// =============================
+
+// State variables
+var int  snip108_state   = 0   // 0 = idle, 1 = armed
+var bool snip108_trigger = false
+
+// Reset trigger each bar
+snip108_trigger := false
+
+// Step 1 condition: snip76 fired AND invalidation level (col_up) < ma_500
+bool snip108_step1 = snip76_trigger and linear_regression > 0 and points < long500
+
+if snip108_state == 0
+    // Step 1: Arm the system
+    if snip108_step1
+        snip108_state := 1
+else if snip108_state == 1
+    // Step 2: Plot 🌟 at the 9th line and reset
+    snip108_state   := 0
+    snip108_trigger := true
+    lastSignalType := "🌟_Snippet108"
+
+// Plot 🌟 at the 9th line when triggered
+plotchar(snip108_trigger ? 9 : na, "🌟", "🌟", location = location.absolute, color = color.yellow, size = size.small)
+
+
+// =============================
+// SNIPPET 109: 🍁 - 3-Step Sequence
+//   Step 1: Wait for snippet1_condition to fire
+//           AND invalidation level (col_down) < BBupper -> arm
+//   Step 2: Wait for rsi_ma50 < 35 -> confirm
+//   Step 3: Plot 🍁 at the 93rd line
+// =============================
+
+// State variables
+var int  snip109_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed
+var bool snip109_trigger = false
+
+// Reset trigger each bar
+snip109_trigger := false
+
+// Step 1 condition: snippet1 fired AND invalidation level (col_down) < BBupper
+bool snip109_step1 = snippet1_condition and linear_regression < 0 and points < BBupper
+
+if snip109_state == 0
+    // Step 1: Arm the system
+    if snip109_step1
+        snip109_state := 1
+else if snip109_state == 1
+    // Step 2: Wait for rsi_ma50 < 35 -> confirm
+    if rsi_ma50 < 37
+        snip109_state := 2
+else if snip109_state == 2
+    // Step 3: Plot 🍁 at the 93rd line and reset
+    snip109_state   := 0
+    snip109_trigger := true
+    lastSignalType := "🍁_Snippet109"
+
+// Plot 🍁 at the 93rd line when triggered
+//plotchar(snip109_trigger ? 93 : na, "🍁", "🍁", location = location.absolute, color = color.orange, size = size.small)
+
+
+
+// =============================
+// SNIPPET 111: ✨ - 2-Step Sequence
+//   Step 1: Wait for snippet1_condition to fire
+//           AND invalidation level (col_up) < ma_500 -> arm
+//   Step 2: Plot ✨ at the 9th line
+// =============================
+
+// State variables
+var int  snip111_state   = 0   // 0 = idle, 1 = armed
+var bool snip111_trigger = false
+
+// Reset trigger each bar
+snip111_trigger := false
+
+// Step 1 condition: snippet1 fired AND invalidation level (col_up) < ma_500
+bool snip111_step1 = snippet1_condition and linear_regression > 0 and points < long500
+
+if snip111_state == 0
+    // Step 1: Arm the system
+    if snip111_step1
+        snip111_state := 1
+else if snip111_state == 1
+    // Step 2: Plot ✨ at the 9th line and reset
+    snip111_state   := 0
+    snip111_trigger := true
+    lastSignalType := "✨_Snippet111"
+
+// Plot ✨ at the 9th line when triggered
+plotchar(snip111_trigger ? 9 : na, "✨", "✨", location = location.absolute, color = color.yellow, size = size.small)
+
+
+// =============================
+// SNIPPET 112: 🚀 - 2-Step Sequence
+//   Step 1: Wait for 🚀 (snip34_trigger) to fire
+//           AND invalidation level (col_up) < ma_500 -> arm
+//   Step 2: Plot 🚀 at the 9th line
+// =============================
+
+// State variables
+var int  snip112_state   = 0   // 0 = idle, 1 = armed
+var bool snip112_trigger = false
+
+// Reset trigger each bar
+snip112_trigger := false
+
+// Step 1 condition: snip34 fired AND invalidation level (col_up) < ma_500
+bool snip112_step1 = snip34_trigger and linear_regression > 0 and points < long500
+
+if snip112_state == 0
+    // Step 1: Arm the system
+    if snip112_step1
+        snip112_state := 1
+else if snip112_state == 1
+    // Step 2: Plot 🚀 at the 9th line and reset
+    snip112_state   := 0
+    snip112_trigger := true
+    lastSignalType := "🚀_Snippet112"
+
+// Plot 🚀 at the 9th line when triggered
+plotchar(snip112_trigger ? 9 : na, "🚀", "🚀", location = location.absolute, color = color.white, size = size.small)
+
+
+
+// =============================
+// SNIPPET 114: 💧 - 2-Step Sequence
+//   Step 1: Wait for ma_350 > BBupper, ma_500 > BBupper, close > ma_350 -> arm
+//   Step 2: Plot 💧 at the 9th line
+// =============================
+
+// State variables
+var int  snip114_state   = 0   // 0 = idle, 1 = armed
+var bool snip114_trigger = false
+
+// Reset trigger each bar
+snip114_trigger := false
+
+// Step 1 condition: ma_350 > BBupper, ma_500 > BBupper, close > ma_350
+bool snip114_step1 = long350 > BBupper and long500 > BBupper and close > long500
+
+if snip114_state == 0
+    // Step 1: Arm the system
+    if snip114_step1
+        snip114_state := 1
+else if snip114_state == 1
+    // Step 2: Plot 💧 at the 9th line and reset
+    snip114_state   := 0
+    snip114_trigger := true
+    lastSignalType := "💧_Snippet114"
+
+// Plot 💧 at the 9th line when triggered
+plotchar(snip114_trigger ? 9 : na, "💧", "💧", location = location.absolute, color = color.aqua, size = size.small)
+
+
+
+
+
+
+// =============================
+// SNIPPET 119: 📌 - 2-Step Sequence
+//   Step 1: Wait for 📌 (snip67_trigger) to fire
+//           AND invalidation level (col_up) < ma_500 -> arm
+//   Step 2: Plot 📌 at the 9th line
+// =============================
+
+// State variables
+var int  snip119_state   = 0   // 0 = idle, 1 = armed
+var bool snip119_trigger = false
+
+// Reset trigger each bar
+snip119_trigger := false
+
+// Step 1 condition: snip67 fired AND invalidation level (col_up) < ma_500
+bool snip119_step1 = snip67_trigger and linear_regression > 0 and points < long500
+
+if snip119_state == 0
+    // Step 1: Arm the system
+    if snip119_step1
+        snip119_state := 1
+else if snip119_state == 1
+    // Step 2: Plot 📌 at the 9th line and reset
+    snip119_state   := 0
+    snip119_trigger := true
+    lastSignalType := "📌_Snippet119"
+
+// Plot 📌 at the 9th line when triggered
+plotchar(snip119_trigger ? 9 : na, "📌", "📌", location = location.absolute, color = color.purple, size = size.small)
+
+
+// =============================
+// SNIPPET 121:  💡 - 2-Step Sequence
+//   Step 1: Wait for 💡 (snip73_trigger) to fire
+//           AND invalidation level (col_up) < BBupper -> arm
+//   Step 2: Plot 💡 at the 9th line
+// =============================
+
+// State variables
+var int  snip121_state   = 0   // 0 = idle, 1 = armed
+var bool snip121_trigger = false
+
+// Reset trigger each bar
+snip121_trigger := false
+
+// Step 1 condition: snip73 fired AND invalidation level (col_up) < BBupper
+bool snip121_step1 = snip73_trigger and linear_regression > 0 and points < BBupper
+
+if snip121_state == 0
+    // Step 1: Arm the system
+    if snip121_step1
+        snip121_state := 1
+else if snip121_state == 1
+    // Step 2: Plot 💡 at the 9th line and reset
+    snip121_state   := 0
+    snip121_trigger := true
+    lastSignalType := "💡_Snippet121"
+
+// Plot 💡 at the 9th line when triggered
+plotchar(snip121_trigger ? 9 : na, "💡", "💡", location = location.absolute, color = color.orange, size = size.small)
+
+
+// =============================
+// SNIPPET 120: 📣 - 6-Step Sequence (UPDATED)
+//   Step 1: Wait for 💡 (snip73_trigger) to fire
+//           AND invalidation level (col_down) < BBupper -> arm
+//   Step 2: Wait for close < BBlower -> confirm
+//   Step 3: Wait for rsi_ma50 > 66 -> confirm
+//   Step 4: Wait for rsi_ma50 < 37 -> confirm
+//   Step 5: Wait for rsi_ma50 > 65 -> confirm
+//   Step 6: Wait for rsi_ma50 < 37 -> confirm
+//   Step 7: Plot 📣 at the 93rd line
+// =============================
+
+// State variables
+var int  snip120_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed, 3 = step3 confirmed, 4 = step4 confirmed, 5 = step5 confirmed, 6 = step6 confirmed
+var bool snip120_trigger = false
+
+// Reset trigger each bar
+snip120_trigger := false
+
+// Step 1 condition: snip73 fired AND invalidation level (col_down) < BBupper
+bool snip120_step1 = snip73_trigger and linear_regression < 0 and points < BBupper
+
+if snip120_state == 0
+    // Step 1: Arm the system
+    if snip120_step1
+        snip120_state := 1
+else if snip120_state == 1
+    // Step 2: Wait for close < BBlower -> confirm
+    if close < BBlower
+        snip120_state := 2
+else if snip120_state == 2
+    // Step 3: Wait for rsi_ma50 > 66 -> confirm
+    if rsi_ma50 > 66
+        snip120_state := 3
+else if snip120_state == 3
+    // Step 4: Wait for rsi_ma50 < 37 -> confirm
+    if rsi_ma50 < 37
+        snip120_state := 4
+else if snip120_state == 4
+    // Step 5: Wait for rsi_ma50 > 65 -> confirm
+    if rsi_ma50 > 65
+        snip120_state := 5
+else if snip120_state == 5
+    // Step 6: Wait for rsi_ma50 < 37 -> confirm
+    if rsi_ma50 < 37
+        snip120_state := 6
+else if snip120_state == 6
+    // Step 7: Plot 📣 at the 93rd line and reset
+    snip120_state   := 0
+    snip120_trigger := true
+    lastSignalType  := "📣_Snippet120"
+
+// Plot 📣 at the 93rd line when triggered
+plotchar(snip120_trigger ? 93 : na, "📣", "📣", location = location.absolute, color = color.orange, size = size.small)
+
+
+// =============================
+// SNIPPET 123: 👺 - 5-Step Sequence (UPDATED)
+//   Step 1: Wait for invalidation level (col_up) > BBupper,
+//           close > ma_350, ma_350 > ma_500 -> arm
+//   Step 2: Wait for rsi_ma50 < 37 -> confirm
+//   Step 3: Wait for rsi_ma50 > 69 -> confirm
+//   Step 4: Wait for rsi_ma50 < 45 -> confirm
+//   Step 5: Plot 👺 at the 93rd line
+// =============================
+
+// State variables
+var int  snip123_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed, 3 = step3 confirmed, 4 = step4 confirmed
+var bool snip123_trigger = false
+
+// Reset trigger each bar
+snip123_trigger := false
+
+// Step 1 condition:
+// 1. linear_regression > 0 (col_up condition)
+// 2. Invalidation level (points) > BBupper
+// 3. close > ma_350
+// 4. ma_350 > ma_500
+bool snip123_step1 = linear_regression > 0 and points > BBupper and close > long350 and long350 > long500
+
+if snip123_state == 0
+    // Step 1: Arm the system
+    if snip123_step1
+        snip123_state := 1
+else if snip123_state == 1
+    // Step 2: Wait for rsi_ma50 < 37 -> confirm
+    if rsi_ma50 < 35
+        snip123_state := 2
+else if snip123_state == 2
+    // Step 3: Wait for rsi_ma50 > 69 -> confirm
+    if rsi_ma50 > 67
+        snip123_state := 3
+else if snip123_state == 3
+    // Step 4: Wait for rsi_ma50 < 45 -> confirm
+    if rsi_ma50 < 37
+        snip123_state := 4
+else if snip123_state == 4
+    // Step 5: Plot 👺 at the 93rd line and reset
+    snip123_state   := 0
+    snip123_trigger := true
+    lastSignalType := "👺_Snippet123"
+
+// Plot 👺 at the 93rd line when triggered
+//plotchar(snip123_trigger ? 93 : na, "👺", "👺", location = location.absolute, color = color.red, size = size.small)
+
+// =============================
+// SNIPPET 125: 👿 - 5-Step Sequence (UPDATED)
+//   Step 1: Wait for ma_350 < BBlower AND ma_500 < BBlower -> arm
+//   Step 2: Wait for rsi_ma50 < 35 -> confirm
+//   Step 3: Wait for rsi_ma50 > 69 -> confirm
+//   Step 4: Wait for rsi_ma50 < 45 -> confirm
+//   Step 5: Plot 👿 at the 93rd line
+// =============================
+
+// State variables
+var int  snip125_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed, 3 = step3 confirmed, 4 = step4 confirmed
+var bool snip125_trigger = false
+
+// Reset trigger each bar
+snip125_trigger := false
+
+// Step 1 condition: ma_350 < BBlower AND ma_500 < BBlower
+bool snip125_step1 = long350 < BBlower and long500 < BBlower
+
+if snip125_state == 0
+    // Step 1: Arm the system
+    if snip125_step1
+        snip125_state := 1
+else if snip125_state == 1
+    // Step 2: Wait for rsi_ma50 < 35 -> confirm
+    if rsi_ma50 < 35
+        snip125_state := 2
+else if snip125_state == 2
+    // Step 3: Wait for rsi_ma50 > 69 -> confirm
+    if rsi_ma50 > 66
+        snip125_state := 3
+else if snip125_state == 3
+    // Step 4: Wait for rsi_ma50 < 45 -> confirm
+    if rsi_ma50 <  37
+        snip125_state := 4
+else if snip125_state == 4
+    // Step 5: Plot 👿 at the 93rd line and reset
+    snip125_state   := 0
+    snip125_trigger := true
+    lastSignalType := "👿_Snippet125"
+
+// Plot 👿 at the 93rd line when triggered
+//plotchar(snip125_trigger ? 93 : na, "👿", "👿", location = location.absolute, color = color.red, size = size.small)
+
+// =============================
+// SNIPPET 126: 👻 - 4-Step Sequence (UPDATED)
+//   Step 1: Wait for ma_350 < BBlower AND ma_500 < BBlower -> arm
+//   Step 2: Wait for ma_500 > BBupper -> confirm
+//   Step 3: Wait for ma_500 > BBlower -> confirm
+//   Step 4: First come, first served:
+//             - If ma_500 < BBlower first -> plot 👻 at the 93rd line
+//             - If ma_500 > BBupper first -> plot 👻 at the 50th line
+// =============================
+
+// State variables
+var int  snip126_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed, 3 = step3 confirmed (waiting for step 4 branch)
+var bool snip126_trigger_93 = false  // 👻 at 93rd line (ma_500 < BBlower)
+var bool snip126_trigger_50 = false  // 👻 at 50th line (ma_500 > BBupper)
+
+// Reset triggers each bar
+snip126_trigger_93 := false
+snip126_trigger_50 := false
+
+// Step 1 condition: ma_350 < BBlower AND ma_500 < BBlower
+bool snip126_step1 = long350 < BBlower and long500 < BBlower
+
+if snip126_state == 0
+    // Step 1: Arm the system
+    if snip126_step1
+        snip126_state := 1
+else if snip126_state == 1
+    // Step 2: Wait for ma_500 > BBupper -> confirm
+    if long500 > BBupper
+        snip126_state := 2
+else if snip126_state == 2
+    // Step 3: Wait for ma_500 > BBlower -> confirm
+    if long500 < BBupper
+        snip126_state := 3
+else if snip126_state == 3
+    // Step 4: First come, first served
+    // Condition A: ma_500 < BBlower -> plot 👻 at 93rd line
+    if long500 < BBlower
+        snip126_state       := 0
+        snip126_trigger_93  := true
+        lastSignalType      := "👻_Snippet126_93"
+    // Condition B: ma_500 > BBupper -> plot 👻 at 50th line
+    else if long500 > BBupper
+        snip126_state       := 0
+        snip126_trigger_50  := true
+        lastSignalType      := "👻_Snippet126_50"
+
+// Plot 👻 at the 93rd line when triggered (ma_500 < BBlower)
+plotchar(snip126_trigger_93 ? 35 : na, "👻", "👻", location = location.absolute, color = color.red, size = size.small)
+
+// Plot 👻 at the 50th line when triggered (ma_500 > BBupper)
+//plotchar(snip126_trigger_50 ? 93 : na, "👻", "👻", location = location.absolute, color = color.red, size = size.small)
+
+
+
+// =============================
+// SNIPPET 127: 🌹 - 3-Step Sequence
+//   Step 1: Wait for ma_350 > BBupper AND ma_500 > BBupper -> arm
+//   Step 2: Wait for ma_350 > ma_500 AND rsi_ma50 > 64 -> confirm
+//   Step 3: Plot 🌹 at the 9th line
+// =============================
+
+// State variables
+var int  snip127_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed
+var bool snip127_trigger = false
+
+// Reset trigger each bar
+snip127_trigger := false
+
+// Step 1 condition: ma_350 > BBupper AND ma_500 > BBupper
+bool snip127_step1 = long350 > BBupper and long500 > BBupper
+
+if snip127_state == 0
+    // Step 1: Arm the system
+    if snip127_step1
+        snip127_state := 1
+else if snip127_state == 1
+    // Step 2: Wait for ma_350 > ma_500 AND rsi_ma50 > 64 -> confirm
+    if long350 > long500 and rsi_ma50 > 64
+        snip127_state := 2
+else if snip127_state == 2
+    // Step 3: Plot 🌹 at the 9th line and reset
+    snip127_state   := 0
+    snip127_trigger := true
+    lastSignalType := "🌹_Snippet127"
+
+// Plot 💦 at the 9th line when triggered
+plotchar(snip127_trigger ? 35 : na, "🌹", "🌹", location = location.absolute, color = color.aqua, size = size.small)
+
+
+// =============================
+// SNIPPET 128: 🐮 - 5-Step Sequence (UPDATED)
+//   Step 1: Wait for 👻 (snip126_trigger_50) to fire -> arm
+//   Step 2: Wait for ma_500 < BBlower -> confirm
+//   Step 3: Wait for BBbasis > ma_500 AND ma_350 < ma_500 -> confirm
+//   Step 4: Wait for rsi_ma50 < 35 -> confirm
+//   Step 5: Wait for rsi_ma50 > 60 -> confirm
+//   Step 6: Plot 🐮 at the 9th line
+// =============================
+
+// State variables
+var int  snip128_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed, 3 = step3 confirmed, 4 = step4 confirmed, 5 = step5 confirmed
+var bool snip128_trigger = false
+
+// Reset trigger each bar
+snip128_trigger := false
+
+if snip128_state == 0
+    // Step 1: Wait for 👻 (snip126_trigger_50) to fire -> arm
+    if snip126_trigger_50
+        snip128_state := 1
+else if snip128_state == 1
+    // Step 2: Wait for ma_500 < BBlower -> confirm
+    if long500 < BBlower
+        snip128_state := 2
+else if snip128_state == 2
+    // Step 3: Wait for BBbasis > ma_500 AND ma_350 < ma_500 -> confirm
+    if BBbasis > long500 and long350 < long500
+        snip128_state := 3
+else if snip128_state == 3
+    // Step 4: Wait for rsi_ma50 < 35 -> confirm
+    if rsi_ma50 < 35
+        snip128_state := 4
+else if snip128_state == 4
+    // Step 5: Wait for rsi_ma50 > 60 -> confirm and trigger
+    if rsi_ma50 > 60
+        snip128_state   := 0
+        snip128_trigger := true
+        lastSignalType  := "🐮_Snippet128"
+
+// Plot 🐮 at the 9th line when triggered
+plotchar(snip128_trigger ? 9 : na, "🐮", "🐮", location = location.absolute, color = color.aqua, size = size.small)
+
+// =============================
+// SNIPPET 129: 🦁 - 2-Step Sequence
+//   Step 1: Wait for ma_500 > BBupper AND ma_350 > BBupper -> arm
+//   Step 2: Wait for ma_500 < BBlower AND close > BBupper -> confirm
+//   Step 3: Plot 🦁 at the 9th line
+// =============================
+
+// State variables
+var int  snip129_state   = 0   // 0 = idle, 1 = armed
+var bool snip129_trigger = false
+
+// Reset trigger each bar
+snip129_trigger := false
+
+// Step 1 condition: ma_500 > BBupper AND ma_350 > BBupper
+bool snip129_step1 = long500 > BBupper and long350 > BBupper
+
+if snip129_state == 0
+    // Step 1: Arm the system
+    if snip129_step1
+        snip129_state := 1
+else if snip129_state == 1
+    // Step 2: Wait for ma_500 < BBlower AND close > BBupper -> confirm and trigger
+    if long500 < BBlower and close > BBupper
+        snip129_state   := 0
+        snip129_trigger := true
+        lastSignalType  := "🦁_Snippet129"
+
+// Plot 🦁 at the 9th line when triggered
+plotchar(snip129_trigger ? 35 : na, "🦁", "🦁", location = location.absolute, color = color.orange, size = size.small)
+
+
+
+// =============================
+// SNIPPET 130: 🍁 - 4-Step Sequence
+//   Step 1: Wait for 🍁 (snip109_trigger) to fire -> arm
+//   Step 2: Wait for rsi_ma50 > 69 -> confirm
+//   Step 3: Wait for rsi_ma50 < 37 -> confirm
+//   Step 4: Plot 🍁 at the 93rd line
+// =============================
+
+// State variables
+var int  snip130_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed, 3 = step3 confirmed
+var bool snip130_trigger = false
+
+// Reset trigger each bar
+snip130_trigger := false
+
+if snip130_state == 0
+    // Step 1: Wait for 🍁 (snip109_trigger) to fire -> arm
+    if snip109_trigger
+        snip130_state := 1
+else if snip130_state == 1
+    // Step 2: Wait for rsi_ma50 > 69 -> confirm
+    if rsi_ma50 > 69
+        snip130_state := 2
+else if snip130_state == 2
+    // Step 3: Wait for rsi_ma50 < 37 -> confirm
+    if rsi_ma50 < 37
+        snip130_state := 3
+else if snip130_state == 3
+    // Step 4: Plot 🍁 at the 93rd line and reset
+    snip130_state   := 0
+    snip130_trigger := true
+    lastSignalType  := "🍁_Snippet130"
+
+// Plot 🍁 at the 93rd line when triggered
+//plotchar(snip130_trigger ? 93 : na, "🍁", "🍁", location = location.absolute, color = color.orange, size = size.small)
+
+
+// =============================
+// SNIPPET 131: 👽 - Single-Step Sequence
+//   Step 1: Wait for 👽 (snip89_trigger) to fire
+//           AND BBbasis > ma_500
+//           AND ma_350 > ma_500 -> arm
+//   Step 2: Plot 👽 at the 75th line
+// =============================
+
+// State variables
+var bool snip131_trigger = false
+
+// Reset trigger each bar
+snip131_trigger := false
+
+// Step 1 condition: snip89 fired AND BBbasis > ma_500 AND ma_350 > ma_500
+bool snip131_step1 = snip89_trigger and BBbasis > long500 and long350 > long500
+
+if snip131_step1
+    // Step 2: Plot 👽 at the 75th line
+    snip131_trigger := true
+    lastSignalType  := "👽_Snippet131"
+
+// Plot 👽 at the 75th line when triggered
+plotchar(snip131_trigger ? 75 : na, "👽", "👽", location = location.absolute, color = color.red, size = size.small)
+
+
+// =============================
+// SNIPPET 132: ☠️ - Single-Step Sequence
+//   Step 1: Wait for ☠️ (snip88_trigger) to fire
+//           AND BBbasis > ma_500
+//           AND ma_350 > ma_500 -> arm
+//   Step 2: Plot ☠️ at the 75th line
+// =============================
+
+// State variables
+var bool snip132_trigger = false
+
+// Reset trigger each bar
+snip132_trigger := false
+
+// Step 1 condition: snip88 fired AND BBbasis > ma_500 AND ma_350 > ma_500
+bool snip132_step1 = snip88_trigger and BBbasis > long500 and long350 > long500
+
+if snip132_step1
+    // Step 2: Plot ☠️ at the 75th line
+    snip132_trigger := true
+    lastSignalType  := "☠️_Snippet132"
+
+// Plot ☠️ at the 75th line when triggered
+plotchar(snip132_trigger ? 75 : na, "☠️", "☠️", location = location.absolute, color = color.red, size = size.small)
+
+
+
+
+// =============================
+// SNIPPET 133: ☠️ - Single-Step Sequence
+//   Step 1: Wait for ☠️ (snip91_trigger) to fire
+//           AND BBbasis > ma_500
+//           AND ma_350 > ma_500 -> arm
+//   Step 2: Plot ☠️ at the 75th line
+// =============================
+
+// State variables
+var bool snip133_trigger = false
+
+// Reset trigger each bar
+snip133_trigger := false
+
+// Step 1 condition: snip91 fired AND BBbasis > ma_500 AND ma_350 > ma_500
+bool snip133_step1 = snip91_trigger and BBbasis > long500 and long350 > long500
+
+if snip133_step1
+    // Step 2: Plot ☠️ at the 75th line
+    snip133_trigger := true
+    lastSignalType  := "☠️_Snippet133"
+
+// Plot ☠️ at the 75th line when triggered
+plotchar(snip133_trigger ? 93 : na, "☠️", "☠️", location = location.absolute, color = color.red, size = size.small)
+
+
+
+
+
+
+// =============================
+// SNIPPET 134: 👽 - Single-Step Sequence
+//   Step 1: Wait for 👽 (snip90_trigger) to fire
+//           AND BBbasis > ma_500
+//           AND ma_350 > ma_500 -> arm
+//   Step 2: Plot 👽 at the 93rd line
+// =============================
+
+// State variables
+var bool snip134_trigger = false
+
+// Reset trigger each bar
+snip134_trigger := false
+
+// Step 1 condition: snip90 fired AND BBbasis > ma_500 AND ma_350 > ma_500
+bool snip134_step1 = snip90_trigger and BBbasis > long500 and long350 > long500
+
+if snip134_step1
+    // Step 2: Plot 👽 at the 93rd line
+    snip134_trigger := true
+    lastSignalType  := "👽_Snippet134"
+
+// Plot 👽 at the 93rd line when triggered
+plotchar(snip134_trigger ? 93 : na, "👽", "👽", location = location.absolute, color = color.red, size = size.small)
+
+
+
+
+// =============================
+// SNIPPET 135: 👾 - 3-Step Sequence (UPDATED)
+//   Step 1: Wait for ⛔ (snip95_trigger) to fire
+//           AND BBbasis > ma_500
+//           AND ma_350 > ma_500 -> arm
+//   Step 2: Wait for rsi_ma50 > 64 -> confirm
+//   Step 3: Wait for rsi_ma50 < 35 -> confirm
+//   Step 4: Plot 👾 at the 75th line
+// =============================
+
+// State variables
+var int  snip135_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed, 3 = step3 confirmed
+var bool snip135_trigger = false
+
+// Reset trigger each bar
+snip135_trigger := false
+
+// Step 1 condition: snip95 fired AND BBbasis > ma_500 AND ma_350 > ma_500
+bool snip135_step1 = snip95_trigger and BBbasis > long500 and long350 > long500
+
+if snip135_state == 0
+    // Step 1: Arm the system
+    if snip135_step1
+        snip135_state := 1
+else if snip135_state == 1
+    // Step 2: Wait for rsi_ma50 > 64 -> confirm
+    if rsi_ma50 > 64
+        snip135_state := 2
+else if snip135_state == 2
+    // Step 3: Wait for rsi_ma50 < 35 -> confirm
+    if rsi_ma50 < 35
+        snip135_state := 3
+else if snip135_state == 3
+    // Step 4: Plot 👾 at the 75th line and reset
+    snip135_state   := 0
+    snip135_trigger := true
+    lastSignalType  := "👾_Snippet135"
+
+// Plot 👾 at the 75th line when triggered
+plotchar(snip135_trigger ? 75 : na, "👾", "👾", location = location.absolute, color = color.purple, size = size.small)
+
+
+
+
+
+// =============================
+// SNIPPET 136: 🔱 - 3-Step Sequence (UPDATED)
+//   Step 1: Wait for 🔱 (snip104_trigger) to fire
+//           AND BBbasis > ma_500
+//           AND ma_350 > ma_500 -> arm
+//   Step 2: Wait for rsi_ma50 > 55 -> confirm
+//   Step 3: Wait for rsi_ma50 < 49 -> confirm
+//   Step 4: Plot 🔱 at the 75th line
+// =============================
+
+// State variables
+var int  snip136_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed, 3 = step3 confirmed
+var bool snip136_trigger = false
+
+// Reset trigger each bar
+snip136_trigger := false
+
+// Step 1 condition: snip104 fired AND BBbasis > ma_500 AND ma_350 > ma_500
+bool snip136_step1 = snip104_trigger and BBbasis > long500 and long350 > long500
+
+if snip136_state == 0
+    // Step 1: Arm the system
+    if snip136_step1
+        snip136_state := 1
+else if snip136_state == 1
+    // Step 2: Wait for rsi_ma50 > 55 -> confirm
+    if rsi_ma50 > 55
+        snip136_state := 2
+else if snip136_state == 2
+    // Step 3: Wait for rsi_ma50 < 49 -> confirm
+    if rsi_ma50 < 49
+        snip136_state := 3
+else if snip136_state == 3
+    // Step 4: Plot 🔱 at the 75th line and reset
+    snip136_state   := 0
+    snip136_trigger := true
+    lastSignalType  := "🔱_Snippet136"
+
+// Plot 🔱 at the 75th line when triggered
+plotchar(snip136_trigger ? 75 : na, "🔱", "🔱", location = location.absolute, color = color.aqua, size = size.small)
+
+// =============================
+// SNIPPET 137: 🔱 - Single-Step Sequence
+//   Step 1: Wait for 🔱 (snip105_trigger) to fire
+//           AND BBbasis > ma_500
+//           AND ma_350 > ma_500 -> arm
+//   Step 2: Plot 🔱 at the 93rd line
+// =============================
+
+// State variables
+var bool snip137_trigger = false
+
+// Reset trigger each bar
+snip137_trigger := false
+
+// Step 1 condition: snip105 fired AND BBbasis > ma_500 AND ma_350 > ma_500
+bool snip137_step1 = snip105_trigger and BBbasis > long500 and long350 > long500
+
+if snip137_step1
+    // Step 2: Plot 🔱 at the 93rd line
+    snip137_trigger := true
+    lastSignalType  := "🔱_Snippet137"
+
+// Plot 🔱 at the 93rd line when triggered
+plotchar(snip137_trigger ? 93 : na, "🔱", "🔱", location = location.absolute, color = color.aqua, size = size.small)
+
+
+
+// =============================
+// SNIPPET 138: 🏆 - 3-Step Sequence (UPDATED)
+//   Step 1: Wait for 🏆 (snip97_trigger) to fire
+//           AND BBbasis > ma_500
+//           AND ma_350 > ma_500 -> arm
+//   Step 2: Wait for rsi_ma50 > 65 -> confirm
+//   Step 3: Wait for rsi_ma50 < 37 -> confirm
+//   Step 4: Plot 🏆 at the 93rd line
+// =============================
+
+// State variables
+var int  snip138_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed, 3 = step3 confirmed
+var bool snip138_trigger = false
+
+// Reset trigger each bar
+snip138_trigger := false
+
+// Step 1 condition: snip97 fired AND BBbasis > ma_500 AND ma_350 > ma_500
+bool snip138_step1 = snip97_trigger and BBbasis > long500 and long350 > long500
+
+if snip138_state == 0
+    // Step 1: Arm the system
+    if snip138_step1
+        snip138_state := 1
+else if snip138_state == 1
+    // Step 2: Wait for rsi_ma50 > 65 -> confirm
+    if rsi_ma50 > 65
+        snip138_state := 2
+else if snip138_state == 2
+    // Step 3: Wait for rsi_ma50 < 37 -> confirm
+    if rsi_ma50 < 37
+        snip138_state := 3
+else if snip138_state == 3
+    // Step 4: Plot 🏆 at the 93rd line and reset
+    snip138_state   := 0
+    snip138_trigger := true
+    lastSignalType  := "🏆_Snippet138"
+
+// Plot 🏆 at the 93rd line when triggered
+plotchar(snip138_trigger ? 93 : na, "🏆", "🏆", location = location.absolute, color = color.yellow, size = size.small)
+
+
+
+
+// =============================
+// SNIPPET 139: 👿 - 3-Step Sequence
+//   Step 1: Wait for 👿 (snip125_trigger) to fire -> arm
+//   Step 2: Wait for rsi_ma50 > 66 -> confirm
+//   Step 3: Wait for rsi_ma50 < 37 -> confirm
+//   Step 4: Plot 👿 at the 93rd line
+// =============================
+
+// State variables
+var int  snip139_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed
+var bool snip139_trigger = false
+
+// Reset trigger each bar
+snip139_trigger := false
+
+if snip139_state == 0
+    // Step 1: Wait for 👿 (snip125_trigger) to fire -> arm
+    if snip125_trigger
+        snip139_state := 1
+else if snip139_state == 1
+    // Step 2: Wait for rsi_ma50 > 66 -> confirm
+    if rsi_ma50 > 66
+        snip139_state := 2
+else if snip139_state == 2
+    // Step 3: Wait for rsi_ma50 < 37 -> confirm
+    if rsi_ma50 < 37
+        snip139_state := 3
+else if snip139_state == 3
+    // Step 4: Plot 👿 at the 93rd line and reset
+    snip139_state   := 0
+    snip139_trigger := true
+    lastSignalType  := "👿_Snippet139"
+
+// Plot 👿 at the 93rd line when triggered
+plotchar(snip139_trigger ? 93 : na, "👿", "👿", location = location.absolute, color = color.red, size = size.small)
+
+
+
+// =============================
+// SNIPPET 140: 👺 - 5-Step Sequence (UPDATED)
+//   Step 1: Wait for 👺 (snip123_trigger) to fire -> arm
+//   Step 2: Wait for rsi_ma50 > 66 -> confirm
+//   Step 3: Wait for rsi_ma50 < 37 -> confirm
+//   Step 4: Wait for rsi_ma50 > 65 -> confirm
+//   Step 5: Wait for rsi_ma50 < 35 -> confirm
+//   Step 6: Plot 👺 at the 93rd line
+// =============================
+
+// State variables
+var int  snip140_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed, 3 = step3 confirmed, 4 = step4 confirmed, 5 = step5 confirmed
+var bool snip140_trigger = false
+
+// Reset trigger each bar
+snip140_trigger := false
+
+if snip140_state == 0
+    // Step 1: Wait for 👺 (snip123_trigger) to fire -> arm
+    if snip123_trigger
+        snip140_state := 1
+else if snip140_state == 1
+    // Step 2: Wait for rsi_ma50 > 66 -> confirm
+    if rsi_ma50 > 66
+        snip140_state := 2
+else if snip140_state == 2
+    // Step 3: Wait for rsi_ma50 < 37 -> confirm
+    if rsi_ma50 < 37
+        snip140_state := 3
+else if snip140_state == 3
+    // Step 4: Wait for rsi_ma50 > 65 -> confirm
+    if rsi_ma50 > 65
+        snip140_state := 4
+else if snip140_state == 4
+    // Step 5: Wait for rsi_ma50 < 35 -> confirm
+    if rsi_ma50 < 37
+        snip140_state := 5
+else if snip140_state == 5
+    // Step 6: Plot 👺 at the 93rd line and reset
+    snip140_state   := 0
+    snip140_trigger := true
+    lastSignalType  := "👺_Snippet140"
+
+// Plot 👺 at the 93rd line when triggered
+plotchar(snip140_trigger ? 93 : na, "👺", "👺", location = location.absolute, color = color.red, size = size.small)
+
+// =============================
+// SNIPPET 141: 🍁 - 3-Step Sequence
+//   Step 1: Wait for 🍁 (snip130_trigger) to fire -> arm
+//   Step 2: Wait for rsi_ma50 > 66 -> confirm
+//   Step 3: Wait for rsi_ma50 < 50 -> confirm
+//   Step 4: Plot 🍁 at the 93rd line
+// =============================
+
+// State variables
+var int  snip141_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed
+var bool snip141_trigger = false
+
+// Reset trigger each bar
+snip141_trigger := false
+
+if snip141_state == 0
+    // Step 1: Wait for 🍁 (snip130_trigger) to fire -> arm
+    if snip130_trigger
+        snip141_state := 1
+else if snip141_state == 1
+    // Step 2: Wait for rsi_ma50 > 66 -> confirm
+    if rsi_ma50 > 66
+        snip141_state := 2
+else if snip141_state == 2
+    // Step 3: Wait for rsi_ma50 < 50 -> confirm
+    if rsi_ma50 < 40
+        snip141_state := 3
+else if snip141_state == 3
+    // Step 4: Plot 🍁 at the 93rd line and reset
+    snip141_state   := 0
+    snip141_trigger := true
+    lastSignalType  := "🍁_Snippet141"
+
+// Plot 🍁 at the 93rd line when triggered
+plotchar(snip141_trigger ? 93 : na, "🍁", "🍁", location = location.absolute, color = color.orange, size = size.small)
+
+
+
+// =============================
+// SNIPPET 142: 🔔 - 3-Step Sequence (UPDATED)
+//   Step 1: Wait for 🔔 (snip74_trigger) to fire
+//           AND invalidation level (col_down) > ma_500 -> arm
+//   Step 2: Wait for ma_350 > ma_500 AND close > BBupper -> confirm
+//   Step 3: Wait for rsi_ma50 < 35 -> confirm
+//   Step 4: Plot 🔔 at the 75th line
+// =============================
+
+// State variables
+var int  snip142_state   = 0   // 0 = idle, 1 = armed, 2 = step2 confirmed
+var bool snip142_trigger = false
+
+// Reset trigger each bar
+snip142_trigger := false
+
+// Step 1 condition: snip74 fired AND invalidation level (col_down) > ma_500
+bool snip142_step1 = snip74_trigger and linear_regression < 0 and points > long500
+
+if snip142_state == 0
+    // Step 1: Arm the system
+    if snip142_step1
+        snip142_state := 1
+else if snip142_state == 1
+    // Step 2: Wait for ma_350 > ma_500 AND close > BBupper -> confirm
+    if long350 > long500 and close > BBupper
+        snip142_state := 2
+else if snip142_state == 2
+    // Step 3: Wait for rsi_ma50 < 35 -> confirm and trigger
+    if rsi_ma50 < 35
+        snip142_state   := 0
+        snip142_trigger := true
+        lastSignalType  := "🔔_Snippet142"
+
+// Plot 🔔 at the 75th line when triggered
+plotchar(snip142_trigger ? 75 : na, "🔔", "🔔", location = location.absolute, color = color.red, size = size.small)
+
+
+
+
+
+
+// =============================
+// SNIPPET 143: 🔔 - 2-Step Sequence
+//   Step 1: Wait for 🔔 (snip74_trigger) to fire
+//           AND invalidation level (col_down) < ma_500 -> arm
+//   Step 2: Wait for ma_350 > ma_500 AND rsi_ma50 > 64 -> confirm
+//   Step 3: Plot 🔔 at the 93rd line
+// =============================
+
+// State variables
+var int  snip143_state   = 0   // 0 = idle, 1 = armed
+var bool snip143_trigger = false
+
+// Reset trigger each bar
+snip143_trigger := false
+
+// Step 1 condition: snip74 fired AND invalidation level (col_down) < ma_500
+bool snip143_step1 = snip74_trigger and linear_regression < 0 and points < long500
+
+if snip143_state == 0
+    // Step 1: Arm the system
+    if snip143_step1
+        snip143_state := 1
+else if snip143_state == 1
+    // Step 2: Wait for ma_350 > ma_500 AND rsi_ma50 > 64 -> confirm and trigger
+    if long350 > long500 and rsi_ma50 > 64
+        snip143_state   := 0
+        snip143_trigger := true
+        lastSignalType  := "🔔_Snippet143"
+
+// Plot 🔔 at the 93rd line when triggered
+plotchar(snip143_trigger ? 9 : na, "🔔", "🔔", location = location.absolute, color = color.red, size = size.small)
+
+
+
+
+
+
+
+
+
+
+
